@@ -13,7 +13,7 @@ product = st.selectbox(
         'Debênture',
         'Letras de Crédito (LCA,LCI, LCD,...)',
         'Tesouro Direto',
-        'Poupança',
+        'Poupança', # Fazer fluxo para poupança. Não terá prazo nem taxa a informar
         'Caixinha Nubank'
     ]
 )
@@ -23,12 +23,22 @@ bond_type = st.radio(
     options=[
         # 'Não sei',
         'Taxa Pré-fixada (ex: 10% a.a.)',
-        'Taxa Pós-fixada (ex: 90% do CDI)',
+        'Taxa Pós-fixada (em porcentagem; ex: 90% do CDI)',
         'Taxa + CDI (ex: 1% + CDI)',
         'Taxa + Selic (ex: 1% + Selic)',
         'Taxa + Inflação (ex: 1% + IPCA)',
     ]
 )
+
+if bond_type == 'Taxa + Inflação (ex: 1% + IPCA)':
+    index_type = st.radio(
+        label='Selecione o tipo de indexador',
+        options=[
+            'IPCA',
+            'IGPM',
+            'INPC'
+        ]
+    )
 
 maturity_type = st.radio(
     label='Informe a data de vencimento',
@@ -74,17 +84,6 @@ if maturity_type is not 'Prazo de Vencimento (em dias)':
     
 # st.write(f"maturity_in_days: {maturity_in_days}, maturity_in_days type: {type(maturity_in_days)}")
 
-
-if bond_type == 'Taxa + Inflação (ex: 1% + IPCA)':
-    index_type = st.radio(
-        label='Selecione o tipo de indexador',
-        options=[
-            'IPCA',
-            'IGPM',
-            'INPC'
-        ]
-    )
-
 fee_input = st.text_input(
     label='Informe a taxa de rendimento',
     # min_value=0.0,
@@ -97,9 +96,7 @@ if fee_input:
     fee_input = float(str(fee_input).replace(",", "."))
 
     # TODO:
-    # fazer lógica para cada um dos tipos:
-    # transformar em taxa anual
-    # caso especial para inflação? (ex: taxa% + IPCA)
+    # adequar a maturidade para a taxa
 
     # request para pegar esses dados
     cdi_fee = 14.39
@@ -107,6 +104,7 @@ if fee_input:
     selic_fee = 14.5
     igpm_fee = 5.0
     inpc_fee = 4.0
+    poupanca_fee = 6
 
     # fazer lógica para os N prazos de tributação e a data de vencimento
     tax_fees = 0
@@ -119,46 +117,60 @@ if fee_input:
     # else:
     #     tax_fees = 0.15
 
-    if bond_type is not 'Taxa Pré-fixada (ex: 10% a.a.)':
-        if bond_type == 'Taxa Pós-fixada (ex: 90% do CDI)':
-            liquid_fee = (fee_input * cdi_fee) * (1 - tax_fees)
-        if bond_type == 'Taxa + CDI (ex: 1% + CDI)':
-            liquid_fee = (fee_input + cdi_fee) * (1 - tax_fees)
-        elif bond_type == 'Taxa + Selic (ex: 1% + Selic)':
-            liquid_fee = (fee_input + selic_fee) * (1 - tax_fees)
-        elif bond_type == 'Taxa + Inflação (ex: 1% + IPCA)':
-            if index_type == 'IPCA':
-                liquid_fee = (fee_input + ipca_fee) * (1 - tax_fees)
-            elif index_type == 'IGPM':
-                liquid_fee = (fee_input + igpm_fee) * (1 - tax_fees)
-            elif index_type == 'INPC':
-                liquid_fee = (fee_input + inpc_fee) * (1 - tax_fees)
+    if bond_type == 'Taxa Pré-fixada (ex: 10% a.a.)':
+        liquid_fee = fee_input * (1 - tax_fees)
+    if bond_type == 'Taxa Pós-fixada (em porcentagem; ex: 90% do CDI)':
+        liquid_fee = (fee_input * cdi_fee) * (1 - tax_fees)
+    if bond_type == 'Taxa + CDI (ex: 1% + CDI)':
+        liquid_fee = (fee_input + cdi_fee) * (1 - tax_fees)
+    elif bond_type == 'Taxa + Selic (ex: 1% + Selic)':
+        liquid_fee = (fee_input + selic_fee) * (1 - tax_fees)
+    elif bond_type == 'Taxa + Inflação (ex: 1% + IPCA)':
+        if index_type == 'IPCA':
+            liquid_fee = (fee_input + ipca_fee) * (1 - tax_fees)
+        elif index_type == 'IGPM':
+            liquid_fee = (fee_input + igpm_fee) * (1 - tax_fees)
+        elif index_type == 'INPC':
+            liquid_fee = (fee_input + inpc_fee) * (1 - tax_fees)
 
     # TODO:
     # calcular o rendimento líquido ou bruto?
+    # Adequar ao produto (ex: Letras não são tributadas)
     # booleano para aparecer as métricas se os inputs forem preenchidos
 
     st.write(
         f'<h2><center>Comparativo do Seu Produto</center></h2>',
         unsafe_allow_html=True
     )
+    st.write(
+        f'<h3><center>Rendimento Líquido: {liquid_fee}%</center></h3>',
+        unsafe_allow_html=True
+    )
     # ajustar lógica do delta
-    cdi_comparison, selic_comparison, index_comparison = st.columns(3)
+    cdi_comparison, selic_comparison, poupanca_comparison = st.columns(3)
     cdi_comparison.metric(
         label='CDI',
         value=f'{cdi_fee}%',
-        delta=f'{round((fee_input/cdi_fee), 2)}%'
+        delta=f'{round(((liquid_fee-cdi_fee)/cdi_fee)*100, 2)}%'
     )
         
     selic_comparison.metric(
         label='Selic',
         value=f'{selic_fee}%',
-        delta=f'{round((fee_input/selic_fee), 2)}%'
+        delta=f'{round(((liquid_fee-selic_fee)/selic_fee)*100, 2)}%'
+    )
+
+    poupanca_comparison.metric(
+        label='Poupança',
+        value=f'{poupanca_fee}%',
+        delta=f'{round(((liquid_fee-poupanca_fee)/poupanca_fee)*100, 2)}%'
     )
 
     # ajustar caso do indexador
-    index_comparison.metric(
-        label='Inflação',
-        value=f'{ipca_fee}%',
-        delta=f'{round((fee_input/(fee_input+ipca_fee)), 2)}%'
-    )
+    # caso especial para inflação? (ex: taxa% + IPCA)
+
+    # index_comparison.metric(
+    #     label='Inflação',
+    #     value=f'{ipca_fee}%',
+    #     delta=f'{round((liquid_fee/(liquid_fee+ipca_fee)), 2)}%'
+    # )
