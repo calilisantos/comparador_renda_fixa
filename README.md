@@ -13,3 +13,8 @@ streamlit run src/main.py
   - Com o valor 'Não sei', o valor padrão é 360 dias
   - O cálculo comparativo é feito comparando a data da consulta
   - O cálculo descapitaliza o vencimento em dias para o comparativo
+- `métrica de comparação`: 
+  - CDI: taxa CDI atual
+  - Selic: taxa Selic atual
+  - IPCA: inflação acumulada em 12 meses
+  - Taxa Líquida: taxa de rendimento líquida
