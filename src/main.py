@@ -21,9 +21,9 @@ product = st.selectbox(
 bond_type = st.radio(
     label='Selecione o tipo de rendimento',
     options=[
-        'Não sei',
+        # 'Não sei',
         'Taxa Pré-fixada (ex: 10% a.a.)',
-        # 'Taxa Pós-fixado ',
+        'Taxa Pós-fixada (ex: 90% do CDI)',
         'Taxa + CDI (ex: 1% + CDI)',
         'Taxa + Selic (ex: 1% + Selic)',
         'Taxa + Inflação (ex: 1% + IPCA)',
@@ -85,11 +85,6 @@ if bond_type == 'Taxa + Inflação (ex: 1% + IPCA)':
         ]
     )
 
-# TODO:
-# fazer lógica para cada um dos tipos:
-# transformar em taxa anual
-# caso especial para inflação? (ex: taxa% + IPCA)
-
 fee_input = st.text_input(
     label='Informe a taxa de rendimento',
     # min_value=0.0,
@@ -101,14 +96,43 @@ fee_input = st.text_input(
 if fee_input:
     fee_input = float(str(fee_input).replace(",", "."))
 
-    # TODO: request para pegar esses dados
+    # TODO:
+    # fazer lógica para cada um dos tipos:
+    # transformar em taxa anual
+    # caso especial para inflação? (ex: taxa% + IPCA)
+
+    # request para pegar esses dados
     cdi_fee = 14.39
     ipca_fee = 6.5
     selic_fee = 14.5
     igpm_fee = 5.0
     inpc_fee = 4.0
 
-    tax_fees = .85
+    # fazer lógica para os N prazos de tributação e a data de vencimento
+    tax_fees = 0
+    # if maturity_in_days <= 180:
+    #     tax_fees = 0.225
+    # elif maturity_in_days <= 360:
+    #     tax_fees = 0.2
+    # elif maturity_in_days <= 720:
+    #     tax_fees = 0.175
+    # else:
+    #     tax_fees = 0.15
+
+    if bond_type is not 'Taxa Pré-fixada (ex: 10% a.a.)':
+        if bond_type == 'Taxa Pós-fixada (ex: 90% do CDI)':
+            liquid_fee = (fee_input * cdi_fee) * (1 - tax_fees)
+        if bond_type == 'Taxa + CDI (ex: 1% + CDI)':
+            liquid_fee = (fee_input + cdi_fee) * (1 - tax_fees)
+        elif bond_type == 'Taxa + Selic (ex: 1% + Selic)':
+            liquid_fee = (fee_input + selic_fee) * (1 - tax_fees)
+        elif bond_type == 'Taxa + Inflação (ex: 1% + IPCA)':
+            if index_type == 'IPCA':
+                liquid_fee = (fee_input + ipca_fee) * (1 - tax_fees)
+            elif index_type == 'IGPM':
+                liquid_fee = (fee_input + igpm_fee) * (1 - tax_fees)
+            elif index_type == 'INPC':
+                liquid_fee = (fee_input + inpc_fee) * (1 - tax_fees)
 
     # TODO:
     # calcular o rendimento líquido ou bruto?
