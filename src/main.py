@@ -10,19 +10,13 @@ product = st.selectbox(
     label='Selecione seu produto',
     options=[
         'CDB',
+        'Debênture',
         'Letras de Crédito (LCA,LCI, LCD,...)',
         'Tesouro Direto',
         'Poupança',
         'Caixinha Nubank'
     ]
 )
-
-# """
-# A depender do produto o input de investimento vai ser diferente
-# Se pré-fixado 
-# pós-fixado
-# indexado
-# """
 
 bond_type = st.radio(
     label='Selecione o tipo de rendimento',
@@ -45,18 +39,26 @@ maturity_type = st.radio(
     ]
 )
 
+today = datetime.now()
+default_date = today + timedelta(days=360)
+
 if maturity_type == 'Data de Vencimento':
-    maturity_date = st.date_input(
-        label='Data',
-        # placeholder='dd/mm/yyyy',
-        # value=None,
-        # min_value=None,
-        # max_value=None,
-        # disabled=False,
-        # help="Selecione a data de vencimento do produto"
+    maturity_date = datetime.combine(
+        date=st.date_input(
+            label='Data',
+            format='DD/MM/YYYY',
+            value=default_date
+            # placeholder='dd/mm/yyyy',
+            # value=None,
+            # min_value=None,
+            # max_value=None,
+            # disabled=False,
+            # help="Selecione a data de vencimento do produto"
+        ),
+        time=today.time()
     )
 elif maturity_type == 'Prazo de Vencimento (em dias)':
-    maturity_date = st.number_input(
+    maturity_in_days = st.number_input(
         label='Informe o prazo de vencimento',
         # placeholder='ex: 30',
         min_value=1,
@@ -65,9 +67,12 @@ elif maturity_type == 'Prazo de Vencimento (em dias)':
         # step=1
     )
 elif maturity_type == 'Não sei':
-    maturity_date = datetime.now() + timedelta(days=360)
-
-# padronizar data para dias em relação a hoje
+    maturity_date = default_date
+    
+if maturity_type is not 'Prazo de Vencimento (em dias)':
+    maturity_in_days = (maturity_date - today).days
+    
+# st.write(f"maturity_in_days: {maturity_in_days}, maturity_in_days type: {type(maturity_in_days)}")
 
 
 if bond_type == 'Taxa + Inflação (ex: 1% + IPCA)':
