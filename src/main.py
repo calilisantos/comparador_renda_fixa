@@ -106,6 +106,15 @@ if fee_input:
     inpc_fee = 4.0
     poupanca_fee = 6
 
+    ## inflação case:
+    index_dict = {
+        'IPCA': ipca_fee,
+        'IGPM': igpm_fee,
+        'INPC': inpc_fee
+    }
+
+    index_fee = index_dict.get(index_type, 'IPCA')
+
     # fazer lógica para os N prazos de tributação e a data de vencimento
     tax_fees = 0
     # if maturity_in_days <= 180:
@@ -126,12 +135,7 @@ if fee_input:
     elif bond_type == 'Taxa + Selic (ex: 1% + Selic)':
         liquid_fee = (fee_input + selic_fee) * (1 - tax_fees)
     elif bond_type == 'Taxa + Inflação (ex: 1% + IPCA)':
-        if index_type == 'IPCA':
-            liquid_fee = (fee_input + ipca_fee) * (1 - tax_fees)
-        elif index_type == 'IGPM':
-            liquid_fee = (fee_input + igpm_fee) * (1 - tax_fees)
-        elif index_type == 'INPC':
-            liquid_fee = (fee_input + inpc_fee) * (1 - tax_fees)
+        liquid_fee = (fee_input + index_fee) * (1 - tax_fees)
 
     # TODO:
     # calcular o rendimento líquido ou bruto?
@@ -146,31 +150,36 @@ if fee_input:
         f'<h3><center>Rendimento Líquido: {liquid_fee}%</center></h3>',
         unsafe_allow_html=True
     )
-    # ajustar lógica do delta
-    cdi_comparison, selic_comparison, poupanca_comparison = st.columns(3)
+
+    cdi_comparison, selic_comparison = st.columns(2) 
+    poupanca_comparison, index_comparison = st.columns(2)
     cdi_comparison.metric(
+        border=True,
+        delta=f'{round(((liquid_fee-cdi_fee)/cdi_fee)*100, 2)}%',
         label='CDI',
-        value=f'{cdi_fee}%',
-        delta=f'{round(((liquid_fee-cdi_fee)/cdi_fee)*100, 2)}%'
+        value=f'{cdi_fee}%'
     )
         
     selic_comparison.metric(
+        border=True,
+        delta=f'{round(((liquid_fee-selic_fee)/selic_fee)*100, 2)}%',
         label='Selic',
         value=f'{selic_fee}%',
-        delta=f'{round(((liquid_fee-selic_fee)/selic_fee)*100, 2)}%'
     )
 
     poupanca_comparison.metric(
+        border=True,
+        delta=f'{round(((liquid_fee-poupanca_fee)/poupanca_fee)*100, 2)}%',
         label='Poupança',
         value=f'{poupanca_fee}%',
-        delta=f'{round(((liquid_fee-poupanca_fee)/poupanca_fee)*100, 2)}%'
     )
 
     # ajustar caso do indexador
     # caso especial para inflação? (ex: taxa% + IPCA)
 
-    # index_comparison.metric(
-    #     label='Inflação',
-    #     value=f'{ipca_fee}%',
-    #     delta=f'{round((liquid_fee/(liquid_fee+ipca_fee)), 2)}%'
-    # )
+    index_comparison.metric(
+        border=True,
+        # delta=f'{round((liquid_fee/(liquid_fee+ipca_fee)), 2)}%',
+        label='Inflação', # comparar com NTN?
+        value=f'{liquid_fee-index_fee}%+{index_type}'
+    )

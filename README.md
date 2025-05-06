@@ -16,5 +16,6 @@ streamlit run src/main.py
 - `métrica de comparação`: 
   - CDI: taxa CDI atual
   - Selic: taxa Selic atual
-  - IPCA: inflação acumulada em 12 meses
+  - IPCA: inflação acumulada em 12 meses.
+    - Se título não for inflação, o padrão é IPCA
   - Taxa Líquida: taxa de rendimento líquida
