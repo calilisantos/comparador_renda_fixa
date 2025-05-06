@@ -13,6 +13,9 @@ streamlit run src/main.py
   - Com o valor 'Não sei', o valor padrão é 360 dias
   - O cálculo comparativo é feito comparando a data da consulta
   - O cálculo descapitaliza o vencimento em dias para o comparativo
+- `mantem o título até o vencimento`: 
+  - Sim: calcula o rendimento até o vencimento
+  - Não: calcula o rendimento até a data informada
 - `métrica de comparação`: 
   - CDI: taxa CDI atual
   - Selic: taxa Selic atual
