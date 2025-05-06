@@ -18,7 +18,7 @@ product = st.selectbox(
     ]
 )
 
-free_tax_options = [
+free_tax_products = [
     'Letras de Crédito (LCA,LCI, LCD,...)',
     'Poupança'
 ]
@@ -117,16 +117,8 @@ fee_input = st.text_input(
 )
 
 if fee_input:
-    fee_input = float(str(fee_input).replace(",", "."))
 
-    # pós-fixada case:
-    if bond_type == 'Taxa Pós-fixada (em porcentagem; ex: 90% do CDI)':
-        fee_input = fee_input / 100
-
-    # TODO:
-    # adequar a maturidade para a taxa
-
-    # request para pegar esses dados
+    # TODO: request para pegar esses dados
     cdi_fee = 14.39
     ipca_fee = 6.5
     selic_fee = 14.5
@@ -143,10 +135,20 @@ if fee_input:
 
     index_fee = index_dict.get(index_type, 'IPCA')
 
+    fee_input = float(str(fee_input).replace(",", "."))
+    
+    bond_fee_by_type = {
+        'Taxa Pós-fixada (em porcentagem; ex: 90% do CDI)': (fee_input / 100) * cdi_fee,
+        'Taxa + CDI (ex: 1% + CDI)': fee_input + cdi_fee,
+        'Taxa + Selic (ex: 1% + Selic)': fee_input + selic_fee,
+        'Taxa + Inflação (ex: 1% + IPCA)': fee_input + index_fee
+    }
+    fee_input = bond_fee_by_type.get(bond_type, fee_input)
+
     # fazer lógica para os N prazos de tributação e a data de vencimento
-    if bond_type in free_tax_options:
+    if product in free_tax_products:
         tax_fees = 0
-    if maturity_in_days <= 180:
+    elif maturity_in_days <= 180:
         tax_fees = 0.225
     elif maturity_in_days <= 360:
         tax_fees = 0.2
@@ -155,19 +157,9 @@ if fee_input:
     else:
         tax_fees = 0.15
 
-    if bond_type == 'Taxa Pré-fixada (ex: 10% a.a.)':
-        liquid_fee = round(fee_input * (1 - tax_fees), 2)
-    if bond_type == 'Taxa Pós-fixada (em porcentagem; ex: 90% do CDI)':
-        liquid_fee = round((fee_input * cdi_fee) * (1 - tax_fees), 2)
-    if bond_type == 'Taxa + CDI (ex: 1% + CDI)':
-        liquid_fee = round((fee_input + cdi_fee) * (1 - tax_fees), 2)
-    elif bond_type == 'Taxa + Selic (ex: 1% + Selic)':
-        liquid_fee = round((fee_input + selic_fee) * (1 - tax_fees), 2)
-    elif bond_type == 'Taxa + Inflação (ex: 1% + IPCA)':
-        liquid_fee = round((fee_input + index_fee) * (1 - tax_fees), 2)
+    liquid_fee = round(fee_input * (1 - tax_fees), 2)
 
     # TODO:
-    # calcular o rendimento líquido ou bruto? por enquanto líquido
     # booleano para aparecer as métricas se os inputs forem preenchidos
 
     st.write(
@@ -175,7 +167,7 @@ if fee_input:
         unsafe_allow_html=True
     )
     st.write(
-        f'<h3><center>Rendimento Líquido: {liquid_fee}%</center></h3>',
+        f'<p><h3><center>Rendimento Líquido: {liquid_fee}%*</p> <p>*Com o resgate em {maturity_in_days} dias</p></center></h3>',
         unsafe_allow_html=True
     )
 
@@ -183,21 +175,21 @@ if fee_input:
     poupanca_comparison, index_comparison = st.columns(2)
     cdi_comparison.metric(
         border=True,
-        delta=f'{round(((liquid_fee-cdi_fee)/cdi_fee)*100, 2)}%',
+        delta=f'{round(((fee_input-cdi_fee)/cdi_fee)*100, 2)}%',
         label='CDI',
         value=f'{cdi_fee}%'
     )
         
     selic_comparison.metric(
         border=True,
-        delta=f'{round(((liquid_fee-selic_fee)/selic_fee)*100, 2)}%',
+        delta=f'{round(((fee_input-selic_fee)/selic_fee)*100, 2)}%',
         label='Selic',
         value=f'{selic_fee}%',
     )
 
     poupanca_comparison.metric(
         border=True,
-        delta=f'{round(((liquid_fee-poupanca_fee)/poupanca_fee)*100, 2)}%',
+        delta=f'{round(((fee_input-poupanca_fee)/poupanca_fee)*100, 2)}%',
         label='Poupança',
         value=f'{poupanca_fee}%',
     )
@@ -206,5 +198,5 @@ if fee_input:
         border=True,
         # delta=f'{round((liquid_fee/(liquid_fee+ipca_fee)), 2)}%',
         label='Inflação', # comparar com NTN?
-        value=f'{round(liquid_fee-index_fee, 2)}%+{index_type}'
+        value=f'{round(fee_input-index_fee, 2)}%+{index_type}'
     )
