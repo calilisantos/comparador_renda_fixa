@@ -1,3 +1,4 @@
+from config.ratio_updates import Dates, Operations, Request
 from datetime import datetime, timedelta
 from functools import reduce
 import requests
@@ -11,52 +12,41 @@ def transform_date(days_diff, date_format=None):
         return past_day.strftime(date_format)
     return today + timedelta(days=days_diff)
 
-default_date = transform_date(days_diff=360)
-
-
-
+default_date = transform_date(days_diff=Dates.default_days_delay)
 
 ## Lógica do request
 
-request_date_format = "%d/%m/%Y"
-fees_request_date = transform_date(days_diff=3, date_format=request_date_format)
-index_request_date = transform_date(days_diff=390, date_format=request_date_format)
-
-
-endpoint = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.{ratio_code}/dados?formato=json&dataInicial={request_date}"
-cdi_code = 12 # 4391
-selic_code = 432 # 11 diário
-ipc_code = 7465
-ipca_code = 433
-igpm_code = 189
+request_date_format = Dates.DATE_FORMAT
+fees_request_date = transform_date(days_diff=Dates.fees_days_delay, date_format=request_date_format)
+index_request_date = transform_date(days_diff=Dates.inflation_days_delay, date_format=request_date_format)
 
 
 def fetch_data(ratio_code, request_date):
     #função para o request - OK; outra para tratar a resposta - Refatorar; outra para converter a taxa para ano - Criar?
-    response = requests.get(endpoint.format(ratio_code=ratio_code, request_date=request_date))
+    response = requests.get(Request.bacen_endpoint.format(ratio_code=ratio_code, request_date=request_date))
     response.raise_for_status()
     return response.json()
 
 def get_ratio(response,ratio_code):
-    if ratio_code == selic_code:
-        return float(response[-1].get("valor"))  # para selic (que é anual)
-    elif ratio_code == cdi_code:
-        value = float(response[-1].get("valor")) / 100
-        return round((((1 + value) ** 252) -1) * 100, 2) # para CDI (que é diário)
+    if ratio_code == Request.selic_code:
+        return float(response[Request.response_index].get(Request.ratio_key))  # para selic (que é anual)
+    elif ratio_code == Request.cdi_code:
+        value = float(response[Request.response_index].get(Request.ratio_key)) / Operations.percent_value
+        return round((((Operations.factor_base + value) ** 252) -Operations.factor_base) * Operations.percent_value, Operations.round_value)
     else:
         compound_value = reduce(
-            lambda acc, curr: (((1 + (acc/100)) * (1 + (float(curr["valor"]) / 100)))-1)*100,
-            response[-12:],
-            0
+            lambda acc, curr: (((Operations.factor_base + (acc/Operations.percent_value)) * (Operations.factor_base + (float(curr[Request.ratio_key]) / Operations.percent_value)))-Operations.factor_base)*Operations.percent_value,
+            response[-Request.response_range:],
+            Operations.reduce_initial
         )
-        return round(compound_value, 2) # para inflação que são acumulado mensal
+        return round(compound_value, Operations.round_value) # para inflação que são acumulado mensal
 
 try:
-    cdi_fee = get_ratio(response=fetch_data(ratio_code=cdi_code, request_date=fees_request_date),ratio_code=cdi_code)
-    selic_fee = get_ratio(response=fetch_data(ratio_code=selic_code, request_date=fees_request_date),ratio_code=selic_code)
-    ipc_fee = get_ratio(response=fetch_data(ratio_code=ipc_code, request_date=index_request_date),ratio_code=ipc_code)
-    ipca_fee = get_ratio(response=fetch_data(ratio_code=ipca_code, request_date=index_request_date),ratio_code=ipca_code)
-    igpm_fee = get_ratio(response=fetch_data(ratio_code=igpm_code, request_date=index_request_date),ratio_code=igpm_code)
+    cdi_fee = get_ratio(response=fetch_data(ratio_code=Request.cdi_code, request_date=fees_request_date),ratio_code=Request.cdi_code)
+    selic_fee = get_ratio(response=fetch_data(ratio_code=Request.selic_code, request_date=fees_request_date),ratio_code=Request.selic_code)
+    ipc_fee = get_ratio(response=fetch_data(ratio_code=Request.ipc_code, request_date=index_request_date),ratio_code=Request.ipc_code)
+    ipca_fee = get_ratio(response=fetch_data(ratio_code=Request.ipca_code, request_date=index_request_date),ratio_code=Request.ipca_code)
+    igpm_fee = get_ratio(response=fetch_data(ratio_code=Request.igpm_code, request_date=index_request_date),ratio_code=Request.igpm_code)
 except:
     cdi_fee = 14.39
     selic_fee = 14.5
@@ -100,30 +90,29 @@ if product == 'Poupança':
     poupanca_comparison, index_comparison = st.columns(2)
     cdi_comparison.metric(
         border=True,
-        delta=f'{round(((fee_input-cdi_fee)/cdi_fee)*100, 2)}%',
+        delta=f'{round(((fee_input-cdi_fee)/cdi_fee)*Operations.percent_value, Operations.round_value)}%',
         label='CDI',
         value=f'{cdi_fee}%'
     )
         
     selic_comparison.metric(
         border=True,
-        delta=f'{round(((fee_input-selic_fee)/selic_fee)*100, 2)}%',
+        delta=f'{round(((fee_input-selic_fee)/selic_fee)*Operations.percent_value, Operations.round_value)}%',
         label='Selic',
         value=f'{selic_fee}%',
     )
 
     poupanca_comparison.metric(
         border=True,
-        delta=f'{round(((fee_input-poupanca_fee)/poupanca_fee)*100, 2)}%',
+        delta=f'{round(((fee_input-poupanca_fee)/poupanca_fee)*Operations.percent_value, Operations.round_value)}%',
         label='Poupança',
         value=f'{poupanca_fee}%',
     )
 
     index_comparison.metric(
         border=True,
-        # delta=f'{round((liquid_fee/(liquid_fee+ipca_fee)), 2)}%',
         label='Inflação', # comparar com NTN?
-        value=f'{round(fee_input-index_fee, 2)}%+{index_type}'
+        value=f'{round(fee_input-index_fee, Operations.round_value)}%+{index_type}'
     )
 else:
     # with st.form(key="bond_form"):
@@ -210,7 +199,7 @@ else:
         fee_input = float(str(fee_input).replace(",", "."))
         
         bond_fee_by_type = {
-            'Taxa Pós-fixada (em porcentagem; ex: 90% do CDI)': (fee_input / 100) * cdi_fee,
+            'Taxa Pós-fixada (em porcentagem; ex: 90% do CDI)': (fee_input / Operations.percent_value) * cdi_fee,
             'Taxa + CDI (ex: 1% + CDI)': fee_input + cdi_fee,
             'Taxa + Selic (ex: 1% + Selic)': fee_input + selic_fee,
             'Taxa + Inflação (ex: 1% + IPCA)': fee_input + index_fee
@@ -229,7 +218,7 @@ else:
         else:
             tax_fees = 0.15
 
-        liquid_fee = round(fee_input * (1 - tax_fees), 2)
+        liquid_fee = round(fee_input * (1 - tax_fees), Operations.round_value)
 
         st.write(
             f'<h2><center>Comparativo do Seu Produto</center></h2>',
@@ -244,21 +233,21 @@ else:
         poupanca_comparison, index_comparison = st.columns(2)
         cdi_comparison.metric(
             border=True,
-            delta=f'{round(((fee_input-cdi_fee)/cdi_fee)*100, 2)}%',
+            delta=f'{round(((fee_input-cdi_fee)/cdi_fee)*Operations.percent_value, Operations.round_value)}%',
             label='CDI',
             value=f'{cdi_fee}%'
         )
             
         selic_comparison.metric(
             border=True,
-            delta=f'{round(((fee_input-selic_fee)/selic_fee)*100, 2)}%',
+            delta=f'{round(((fee_input-selic_fee)/selic_fee)*Operations.percent_value, Operations.round_value)}%',
             label='Selic',
             value=f'{selic_fee}%',
         )
 
         poupanca_comparison.metric(
             border=True,
-            delta=f'{round(((fee_input-poupanca_fee)/poupanca_fee)*100, 2)}%',
+            delta=f'{round(((fee_input-poupanca_fee)/poupanca_fee)*Operations.percent_value, Operations.round_value)}%',
             label='Poupança',
             value=f'{poupanca_fee}%',
         )
@@ -266,5 +255,5 @@ else:
         index_comparison.metric(
             border=True,
             label='Inflação',
-            value=f'{round(fee_input-index_fee, 2)}%+{index_type}'
+            value=f'{round(fee_input-index_fee, Operations.round_value)}%+{index_type}'
         )
