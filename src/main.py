@@ -1,5 +1,75 @@
 from datetime import datetime, timedelta
+from functools import reduce
+import requests
 import streamlit as st
+
+
+today = datetime.now()
+default_date = today + timedelta(days=360)
+
+
+
+
+## Lógica do request
+request_date_format = "%d/%m/%Y"
+yesterday = today - timedelta(days=1)
+endpoint = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.{ratio_code}/dados?formato=json&dataInicial={request_date}"
+
+last_year = today - timedelta(days=390)
+fees_request_date = yesterday.strftime(request_date_format)
+index_request_date = last_year.strftime(request_date_format)
+
+cdi_code = 12 # 4391
+selic_code = 432 # 11 diário
+ipc_code = 7465
+ipca_code = 433
+igpm_code = 189
+
+
+def fetch_data(ratio_code, request_date):
+    #função para o request - OK; outra para tratar a resposta - Refatorar; outra para converter a taxa para ano - Criar?
+    response = requests.get(endpoint.format(ratio_code=ratio_code, request_date=request_date))
+    response.raise_for_status()
+    return response.json()
+
+def get_ratio(response,ratio_code):
+    if ratio_code == selic_code:
+        return float(response[-1].get("valor"))  # para selic (que é anual)
+    elif ratio_code == cdi_code:
+        value = float(response[-1].get("valor")) / 100
+        return round((((1 + value) ** 252) -1) * 100, 2) # para CDI (que é diário)
+    else:
+        compound_value = reduce(
+            lambda acc, curr: (((1 + (acc/100)) * (1 + (float(curr["valor"]) / 100)))-1)*100,
+            response[-12:],
+            0
+        )
+        return round(compound_value, 2) # para inflação que são acumulado mensal
+
+try:
+    cdi_fee = get_ratio(response=fetch_data(ratio_code=cdi_code, request_date=fees_request_date),ratio_code=cdi_code)
+    selic_fee = get_ratio(response=fetch_data(ratio_code=selic_code, request_date=fees_request_date),ratio_code=selic_code)
+    ipc_fee = get_ratio(response=fetch_data(ratio_code=ipc_code, request_date=index_request_date),ratio_code=ipc_code)
+    ipca_fee = get_ratio(response=fetch_data(ratio_code=ipca_code, request_date=index_request_date),ratio_code=ipca_code)
+    igpm_fee = get_ratio(response=fetch_data(ratio_code=igpm_code, request_date=index_request_date),ratio_code=igpm_code)
+except:
+    cdi_fee = 14.39
+    selic_fee = 14.5
+    ipc_fee = 4.0
+    ipca_fee = 6.5
+    igpm_fee = 5.0
+
+
+poupanca_fee = 6.17
+
+fee_input = poupanca_fee
+index_fee = ipca_fee
+index_type = 'IPCA'
+
+
+
+# Lógica do app
+
 
 st.write(
     f'<h1><center>Comparador de Renda Fixa</center></h1>',
@@ -17,18 +87,6 @@ product = st.selectbox(
         'Caixinha Nubank'
     ]
 )
-
-# TODO: request para pegar esses dados
-cdi_fee = 14.39
-ipca_fee = 6.5
-selic_fee = 14.5
-igpm_fee = 5.0
-inpc_fee = 4.0
-poupanca_fee = 6.17
-
-fee_input = poupanca_fee
-index_fee = ipca_fee
-index_type = 'IPCA'
 
 if product == 'Poupança':
     st.write(
@@ -89,7 +147,7 @@ else:
             options=[
                 'IPCA',
                 'IGPM',
-                'INPC'
+                'IPC'
             ]
         )
 
@@ -101,9 +159,6 @@ else:
             'Prazo de Vencimento (em dias)'
         ]
     )
-
-    today = datetime.now()
-    default_date = today + timedelta(days=360)
 
     if maturity_type == 'Data de Vencimento':
         maturity_date = datetime.combine(
@@ -168,7 +223,7 @@ else:
         index_dict = {
             'IPCA': ipca_fee,
             'IGPM': igpm_fee,
-            'INPC': inpc_fee
+            'IPC': ipc_fee
         }
 
         index_fee = index_dict.get(index_type, 'IPCA')
