@@ -5,20 +5,25 @@ import streamlit as st
 
 
 today = datetime.now()
-default_date = today + timedelta(days=360)
+def transform_date(days_diff, date_format=None):
+    if date_format:
+        past_day = today - timedelta(days=days_diff)
+        return past_day.strftime(date_format)
+    return today + timedelta(days=days_diff)
+
+default_date = transform_date(days_diff=360)
 
 
 
 
 ## Lógica do request
+
 request_date_format = "%d/%m/%Y"
-yesterday = today - timedelta(days=1)
+fees_request_date = transform_date(days_diff=3, date_format=request_date_format)
+index_request_date = transform_date(days_diff=390, date_format=request_date_format)
+
+
 endpoint = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.{ratio_code}/dados?formato=json&dataInicial={request_date}"
-
-last_year = today - timedelta(days=390)
-fees_request_date = yesterday.strftime(request_date_format)
-index_request_date = last_year.strftime(request_date_format)
-
 cdi_code = 12 # 4391
 selic_code = 432 # 11 diário
 ipc_code = 7465
@@ -61,15 +66,12 @@ except:
 
 
 poupanca_fee = 6.17
-
 fee_input = poupanca_fee
 index_fee = ipca_fee
 index_type = 'IPCA'
 
 
-
 # Lógica do app
-
 
 st.write(
     f'<h1><center>Comparador de Renda Fixa</center></h1>',
@@ -124,11 +126,7 @@ if product == 'Poupança':
         value=f'{round(fee_input-index_fee, 2)}%+{index_type}'
     )
 else:
-    free_tax_products = [
-        'Letras de Crédito (LCA,LCI, LCD,...)',
-        'Poupança'
-    ]
-
+    # with st.form(key="bond_form"):
     bond_type = st.radio(
         label='Selecione o tipo de rendimento',
         options=[
@@ -166,12 +164,6 @@ else:
                 label='Data',
                 format='DD/MM/YYYY',
                 value=default_date
-                # placeholder='dd/mm/yyyy',
-                # value=None,
-                # min_value=None,
-                # max_value=None,
-                # disabled=False,
-                # help="Selecione a data de vencimento do produto"
             ),
             time=today.time()
         )
@@ -179,13 +171,9 @@ else:
     elif maturity_type == 'Prazo de Vencimento (em dias)':
         maturity_in_days = st.number_input(
             label='Informe o prazo de vencimento (em dias)',
-            # placeholder='ex: 30',
-            min_value=1,
-            # max_value=100,
-            # value=10,
-            # step=1
+            min_value=1
         )
-    elif maturity_type == 'Não sei':
+    else:
         maturity_date = default_date
         maturity_in_days = (maturity_date - today).days
 
@@ -200,26 +188,17 @@ else:
         if hold_until_maturity == 'Não':
             maturity_in_days = st.number_input(
                 label='Informe o tempo que pretende manter o produto (em dias)',
-                # placeholder='ex: 30',
-                min_value=1,
-                # max_value=100,
-                # value=10,
-                # step=1
+                min_value=1
             )
-        
-    # st.write(f"maturity_in_days: {maturity_in_days}, maturity_in_days type: {type(maturity_in_days)}")
 
     fee_input = st.text_input(
-        label='Informe a taxa de rendimento (ou taxa de referência para o pós-fixado: ex. 95,3 para 95,3% CDI)',
-        # min_value=0.0,
-        # max_value=100.0,
-        # value=10.0,
-        # step=0.1
+        label='Informe a taxa de rendimento (ou taxa de referência para o pós-fixado: ex. 95,3 para 95,3% CDI)'
     )
 
-    if fee_input:
+    # submitted = st.form_submit_button("Comparar Produto")
 
-        ## inflação case:
+    # if submitted and fee_input:
+    if fee_input:
         index_dict = {
             'IPCA': ipca_fee,
             'IGPM': igpm_fee,
@@ -236,10 +215,10 @@ else:
             'Taxa + Selic (ex: 1% + Selic)': fee_input + selic_fee,
             'Taxa + Inflação (ex: 1% + IPCA)': fee_input + index_fee
         }
+
         fee_input = bond_fee_by_type.get(bond_type, fee_input)
 
-        # fazer lógica para os N prazos de tributação e a data de vencimento
-        if product in free_tax_products:
+        if product == 'Letras de Crédito (LCA,LCI, LCD,...)':
             tax_fees = 0
         elif maturity_in_days <= 180:
             tax_fees = 0.225
@@ -251,9 +230,6 @@ else:
             tax_fees = 0.15
 
         liquid_fee = round(fee_input * (1 - tax_fees), 2)
-
-        # TODO:
-        # booleano para aparecer as métricas se os inputs forem preenchidos
 
         st.write(
             f'<h2><center>Comparativo do Seu Produto</center></h2>',
@@ -289,7 +265,6 @@ else:
 
         index_comparison.metric(
             border=True,
-            # delta=f'{round((liquid_fee/(liquid_fee+ipca_fee)), 2)}%',
-            label='Inflação', # comparar com NTN?
+            label='Inflação',
             value=f'{round(fee_input-index_fee, 2)}%+{index_type}'
         )
