@@ -7,6 +7,7 @@ class Text:
     cdi_option_label = 'Taxa + CDI (ex: 1% + CDI)'
     comparative_title = f'<h2><center>Comparativo do Seu Produto</center></h2>'
     credit_letters_label = 'Letras de Crédito (LCA,LCI, LCD,...)'
+    credit_letters_title = '<p><h3><center>Rendimento Líquido: {liquid_fee}%*</p> <p><strong>Rendimento equivalente {fee_input}%**</strong></p> <p>*Com o resgate em {maturity_in_days} dias</p> <p>**Considerando a compensação tributária. Usado no comparativo abaixo:</p></center></h3>'
     date_input_format = 'DD/MM/YYYY'
     date_label = 'Data'
     days_maturity_label = 'Informe o prazo de vencimento (em dias)'

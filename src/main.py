@@ -183,9 +183,7 @@ else:
 
         fee_input = bond_fee_by_type.get(bond_type, fee_input)
 
-        if product == Text.credit_letters_label:
-            tax_fees = Tax.free_tax
-        elif maturity_in_days <= Tax.semester_range:
+        if maturity_in_days <= Tax.semester_range:
             tax_fees = Tax.semester_fee
         elif maturity_in_days <= Tax.anual_range:
             tax_fees = Tax.anual_fee
@@ -194,14 +192,24 @@ else:
         else:
             tax_fees = Tax.beyond_fee
 
-        liquid_fee = round(fee_input * (Operations.factor_base - tax_fees), Operations.round_value)
+        def set_tax_adjusted(fee, tax_fee):
+            return round(fee * (Operations.factor_base - tax_fee), Operations.round_value)
+
+        if product == Text.credit_letters_label:
+            liquid_fee = set_tax_adjusted(fee=fee_input, tax_fee=Tax.free_tax)
+            fee_input = set_tax_adjusted(fee=fee_input, tax_fee=-tax_fees)
+            liquid_title = Text.credit_letters_title.format(liquid_fee=liquid_fee, maturity_in_days=maturity_in_days, fee_input=fee_input)
+        else:
+            liquid_fee = set_tax_adjusted(fee=fee_input, tax_fee=tax_fees)
+            liquid_title = Text.liquid_fee_title.format(liquid_fee=liquid_fee, maturity_in_days=maturity_in_days)
 
         st.write(
             Text.result_title,
             unsafe_allow_html=True
         )
+
         st.write(
-            Text.liquid_fee_title.format(liquid_fee=liquid_fee, maturity_in_days=maturity_in_days),
+            liquid_title,
             unsafe_allow_html=True
         )
 
