@@ -1,6 +1,7 @@
-from models.dates import Dates
+from models.date import Date
 from models.yields import DefaultValues, Operations, Tax
 from models.request import Request
+from services.date import Date as DateSvc
 from datetime import datetime, timedelta
 from functools import reduce
 from interfaces.components import Menu, Text
@@ -8,20 +9,26 @@ import requests
 import streamlit as st
 
 
+# model tem o contrato dos dados a serem usados 
+# service faz o request mas não se comunica com model
+# controller orquestra o contrato com a service e a view
+# view encapsula funcionalidades da interface, mas só. As operações dela (como de data de vencimento) vão para service
+
 today = datetime.now() # deixar na main ou controller. É usada no request e no deal com data de vencimento
-def transform_date(days_diff, date_format=None):
-    if date_format:
-        past_day = today - timedelta(days=days_diff)
-        return past_day.strftime(date_format)
-    return today + timedelta(days=days_diff)
+date_svc = DateSvc(current_date=today)
+# def transform_date(days_diff, date_format=None): # mover para service do request
+#     if date_format:
+#         past_day = today - timedelta(days=days_diff)
+#         return past_day.strftime(date_format)
+#     return today + timedelta(days=days_diff)
 
-default_date = transform_date(days_diff=Dates.default_days_delay)
+default_date = date_svc.transform_date(days_diff=Date.default_days_delay) # mover para service do request
 
-## Lógica do request
+# ## Lógica do request -> mover para service
 
-request_date_format = Dates.DATE_FORMAT
-yields_request_date = transform_date(days_diff=Dates.yields_days_delay, date_format=request_date_format)
-index_request_date = transform_date(days_diff=Dates.inflation_days_delay, date_format=request_date_format)
+request_date_format = Date.DATE_FORMAT
+yields_request_date = date_svc.transform_date(days_diff=Date.yields_days_delay, date_format=request_date_format)
+index_request_date = date_svc.transform_date(days_diff=Date.inflation_days_delay, date_format=request_date_format)
 
 
 def fetch_data(ratio_code, request_date):
