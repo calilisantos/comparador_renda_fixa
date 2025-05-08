@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 
-@dataclass
+# @dataclass
 class DefaultValues:
     CDI_YIELD = 14.39
     SELIC_YIELD = 14.5
