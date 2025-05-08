@@ -1,4 +1,6 @@
-from models.ratio_updates import Dates, DefaultValues, Operations, Request, Tax
+from models.dates import Dates
+from models.yields import DefaultValues, Operations, Tax
+from models.request import Request
 from datetime import datetime, timedelta
 from functools import reduce
 from interfaces.components import Menu, Text
@@ -6,7 +8,7 @@ import requests
 import streamlit as st
 
 
-today = datetime.now()
+today = datetime.now() # deixar na main ou controller. É usada no request e no deal com data de vencimento
 def transform_date(days_diff, date_format=None):
     if date_format:
         past_day = today - timedelta(days=days_diff)
@@ -18,7 +20,7 @@ default_date = transform_date(days_diff=Dates.default_days_delay)
 ## Lógica do request
 
 request_date_format = Dates.DATE_FORMAT
-fees_request_date = transform_date(days_diff=Dates.fees_days_delay, date_format=request_date_format)
+yields_request_date = transform_date(days_diff=Dates.yields_days_delay, date_format=request_date_format)
 index_request_date = transform_date(days_diff=Dates.inflation_days_delay, date_format=request_date_format)
 
 
@@ -43,22 +45,22 @@ def get_ratio(response,ratio_code):
         return round(compound_value, Operations.round_value) # para inflação que são acumulado mensal
 
 try:
-    cdi_fee = get_ratio(response=fetch_data(ratio_code=Request.cdi_code, request_date=fees_request_date),ratio_code=Request.cdi_code)
-    selic_fee = get_ratio(response=fetch_data(ratio_code=Request.selic_code, request_date=fees_request_date),ratio_code=Request.selic_code)
-    ipc_fee = get_ratio(response=fetch_data(ratio_code=Request.ipc_code, request_date=index_request_date),ratio_code=Request.ipc_code)
-    ipca_fee = get_ratio(response=fetch_data(ratio_code=Request.ipca_code, request_date=index_request_date),ratio_code=Request.ipca_code)
-    igpm_fee = get_ratio(response=fetch_data(ratio_code=Request.igpm_code, request_date=index_request_date),ratio_code=Request.igpm_code)
+    cdi_yield = get_ratio(response=fetch_data(ratio_code=Request.cdi_code, request_date=yields_request_date),ratio_code=Request.cdi_code)
+    selic_yield = get_ratio(response=fetch_data(ratio_code=Request.selic_code, request_date=yields_request_date),ratio_code=Request.selic_code)
+    ipc_yield = get_ratio(response=fetch_data(ratio_code=Request.ipc_code, request_date=index_request_date),ratio_code=Request.ipc_code)
+    ipca_yield = get_ratio(response=fetch_data(ratio_code=Request.ipca_code, request_date=index_request_date),ratio_code=Request.ipca_code)
+    igpm_yield = get_ratio(response=fetch_data(ratio_code=Request.igpm_code, request_date=index_request_date),ratio_code=Request.igpm_code)
 except:
-    cdi_fee = DefaultValues.CDI_FEE
-    selic_fee = DefaultValues.SELIC_FEE
-    ipc_fee = DefaultValues.IPC_FEE
-    ipca_fee = DefaultValues.IPCA_FEE
-    igpm_fee = DefaultValues.IGPM_FEE
+    cdi_yield = DefaultValues.CDI_YIELD
+    selic_yield = DefaultValues.SELIC_YIELD
+    ipc_yield = DefaultValues.IPC_YIELD
+    ipca_yield = DefaultValues.IPCA_YIELD
+    igpm_yield = DefaultValues.IGPM_YIELD
 
 
-poupanca_fee = DefaultValues.POUPANCA_FEE
-fee_input = poupanca_fee
-index_fee = ipca_fee
+poupanca_yield = DefaultValues.POUPANCA_YIELD
+yield_input = poupanca_yield
+index_yield = ipca_yield
 index_type = DefaultValues.INDEX_TYPE
 
 
@@ -84,29 +86,29 @@ if product == Text.poupanca_label:
     poupanca_comparison, index_comparison = st.columns(Menu.columns_qty)
     cdi_comparison.metric(
         border=True,
-        delta=f'{round(((fee_input-cdi_fee)/cdi_fee)*Operations.percent_value, Operations.round_value)}%',
+        delta=f'{round(((yield_input-cdi_yield)/cdi_yield)*Operations.percent_value, Operations.round_value)}%',
         label=Text.cdi_label,
-        value=f'{cdi_fee}%'
+        value=f'{cdi_yield}%'
     )
         
     selic_comparison.metric(
         border=True,
-        delta=f'{round(((fee_input-selic_fee)/selic_fee)*Operations.percent_value, Operations.round_value)}%',
+        delta=f'{round(((yield_input-selic_yield)/selic_yield)*Operations.percent_value, Operations.round_value)}%',
         label=Text.selic_label,
-        value=f'{selic_fee}%',
+        value=f'{selic_yield}%',
     )
 
     poupanca_comparison.metric(
         border=True,
-        delta=f'{round(((fee_input-poupanca_fee)/poupanca_fee)*Operations.percent_value, Operations.round_value)}%',
+        delta=f'{round(((yield_input-poupanca_yield)/poupanca_yield)*Operations.percent_value, Operations.round_value)}%',
         label=Text.poupanca_label,
-        value=f'{poupanca_fee}%',
+        value=f'{poupanca_yield}%',
     )
 
     index_comparison.metric(
         border=True,
         label=Text.inflation_label, # comparar com NTN?
-        value=f'{round(fee_input-index_fee, Operations.round_value)}%+{index_type}'
+        value=f'{round(yield_input-index_yield, Operations.round_value)}%+{index_type}'
     )
 else:
     # with st.form(key="bond_form"):
@@ -156,52 +158,52 @@ else:
                 min_value=Operations.factor_base
             )
 
-    fee_input = st.text_input(
-        label=Text.fee_input_label
+    yield_input = st.text_input(
+        label=Text.yield_input_label
     )
 
     # submitted = st.form_submit_button("Comparar Produto")
 
-    # if submitted and fee_input:
-    if fee_input:
+    # if submitted and yield_input:
+    if yield_input:
         index_dict = {
-            DefaultValues.INDEX_TYPE: ipca_fee,
-            Text.igpm_label: igpm_fee,
-            Text.ipc_label: ipc_fee
+            DefaultValues.INDEX_TYPE: ipca_yield,
+            Text.igpm_label: igpm_yield,
+            Text.ipc_label: ipc_yield
         }
 
-        index_fee = index_dict.get(index_type, DefaultValues.INDEX_TYPE)
+        index_yield = index_dict.get(index_type, DefaultValues.INDEX_TYPE)
 
-        fee_input = float(str(fee_input).replace(",", "."))
+        yield_input = float(str(yield_input).replace(",", "."))
         
-        bond_fee_by_type = {
-            Text.post_fixed_option_label: (fee_input / Operations.percent_value) * cdi_fee,
-            Text.cdi_option_label: fee_input + cdi_fee,
-            Text.selic_option_label: fee_input + selic_fee,
-            Text.inflation_option_label: fee_input + index_fee
+        bond_yield_by_type = {
+            Text.post_fixed_option_label: (yield_input / Operations.percent_value) * cdi_yield,
+            Text.cdi_option_label: yield_input + cdi_yield,
+            Text.selic_option_label: yield_input + selic_yield,
+            Text.inflation_option_label: yield_input + index_yield
         }
 
-        fee_input = bond_fee_by_type.get(bond_type, fee_input)
+        yield_input = bond_yield_by_type.get(bond_type, yield_input)
 
         if maturity_in_days <= Tax.semester_range:
-            tax_fees = Tax.semester_fee
+            tax_yields = Tax.semester_yield
         elif maturity_in_days <= Tax.anual_range:
-            tax_fees = Tax.anual_fee
+            tax_yields = Tax.anual_yield
         elif maturity_in_days <= Tax.bianual_range:
-            tax_fees = Tax.bianual_fee
+            tax_yields = Tax.bianual_yield
         else:
-            tax_fees = Tax.beyond_fee
+            tax_yields = Tax.beyond_yield
 
-        def set_tax_adjusted(fee, tax_fee):
-            return round(fee * (Operations.factor_base - tax_fee), Operations.round_value)
+        def set_tax_adjusted(yield_value, tax_yield):
+            return round(yield_value * (Operations.factor_base - tax_yield), Operations.round_value)
 
         if product == Text.credit_letters_label:
-            liquid_fee = set_tax_adjusted(fee=fee_input, tax_fee=Tax.free_tax)
-            fee_input = set_tax_adjusted(fee=fee_input, tax_fee=-tax_fees)
-            liquid_title = Text.credit_letters_title.format(liquid_fee=liquid_fee, maturity_in_days=maturity_in_days, fee_input=fee_input)
+            liquid_yield = set_tax_adjusted(yield_value=yield_input, tax_yield=Tax.free_tax)
+            yield_input = set_tax_adjusted(yield_value=yield_input, tax_yield=-tax_yields)
+            liquid_title = Text.credit_letters_title.format(liquid_yield=liquid_yield, maturity_in_days=maturity_in_days, yield_input=yield_input)
         else:
-            liquid_fee = set_tax_adjusted(fee=fee_input, tax_fee=tax_fees)
-            liquid_title = Text.liquid_fee_title.format(liquid_fee=liquid_fee, maturity_in_days=maturity_in_days)
+            liquid_yield = set_tax_adjusted(yield_value=yield_input, tax_yield=tax_yields)
+            liquid_title = Text.liquid_yield_title.format(liquid_yield=liquid_yield, maturity_in_days=maturity_in_days)
 
         st.write(
             Text.result_title,
@@ -217,27 +219,27 @@ else:
         poupanca_comparison, index_comparison = st.columns(Menu.columns_qty)
         cdi_comparison.metric(
             border=True,
-            delta=f'{round(((fee_input-cdi_fee)/cdi_fee)*Operations.percent_value, Operations.round_value)}%',
+            delta=f'{round(((yield_input-cdi_yield)/cdi_yield)*Operations.percent_value, Operations.round_value)}%',
             label=Text.cdi_label,
-            value=f'{cdi_fee}%'
+            value=f'{cdi_yield}%'
         )
             
         selic_comparison.metric(
             border=True,
-            delta=f'{round(((fee_input-selic_fee)/selic_fee)*Operations.percent_value, Operations.round_value)}%',
+            delta=f'{round(((yield_input-selic_yield)/selic_yield)*Operations.percent_value, Operations.round_value)}%',
             label=Text.selic_label,
-            value=f'{selic_fee}%',
+            value=f'{selic_yield}%',
         )
 
         poupanca_comparison.metric(
             border=True,
-            delta=f'{round(((fee_input-poupanca_fee)/poupanca_fee)*Operations.percent_value, Operations.round_value)}%',
+            delta=f'{round(((yield_input-poupanca_yield)/poupanca_yield)*Operations.percent_value, Operations.round_value)}%',
             label=Text.poupanca_label,
-            value=f'{poupanca_fee}%',
+            value=f'{poupanca_yield}%',
         )
 
         index_comparison.metric(
             border=True,
             label=Text.inflation_label,
-            value=f'{round(fee_input-index_fee, Operations.round_value)}%+{index_type}'
+            value=f'{round(yield_input-index_yield, Operations.round_value)}%+{index_type}'
         )
