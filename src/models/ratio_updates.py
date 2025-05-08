@@ -28,4 +28,28 @@ class Operations:
     percent_value = 100
     reduce_initial = 0
     round_value = 2
+    util_days = 252
+
+
+@dataclass
+class DefaultValues:
+    CDI_FEE = 14.39
+    SELIC_FEE = 14.5
+    IPC_FEE = 4.0
+    IPCA_FEE = 6.5
+    IGPM_FEE = 5.0
+    POUPANCA_FEE = 6.17
+    INDEX_TYPE = 'IPCA'
+
+
+@dataclass
+class Tax:
+    anual_fee = 0.2
+    anual_range = 360
+    beyond_fee = 0.15
+    bianual_fee = 0.175
+    bianual_range = 720
+    free_tax = 0
+    semester_fee = 0.225
+    semester_range = 180
 

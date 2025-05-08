@@ -1,6 +1,7 @@
-from config.ratio_updates import Dates, Operations, Request
+from models.ratio_updates import Dates, DefaultValues, Operations, Request, Tax
 from datetime import datetime, timedelta
 from functools import reduce
+from interfaces.components import Menu, Text
 import requests
 import streamlit as st
 
@@ -32,7 +33,7 @@ def get_ratio(response,ratio_code):
         return float(response[Request.response_index].get(Request.ratio_key))  # para selic (que é anual)
     elif ratio_code == Request.cdi_code:
         value = float(response[Request.response_index].get(Request.ratio_key)) / Operations.percent_value
-        return round((((Operations.factor_base + value) ** 252) -Operations.factor_base) * Operations.percent_value, Operations.round_value)
+        return round((((Operations.factor_base + value) ** Operations.util_days) -Operations.factor_base) * Operations.percent_value, Operations.round_value)
     else:
         compound_value = reduce(
             lambda acc, curr: (((Operations.factor_base + (acc/Operations.percent_value)) * (Operations.factor_base + (float(curr[Request.ratio_key]) / Operations.percent_value)))-Operations.factor_base)*Operations.percent_value,
@@ -48,140 +49,115 @@ try:
     ipca_fee = get_ratio(response=fetch_data(ratio_code=Request.ipca_code, request_date=index_request_date),ratio_code=Request.ipca_code)
     igpm_fee = get_ratio(response=fetch_data(ratio_code=Request.igpm_code, request_date=index_request_date),ratio_code=Request.igpm_code)
 except:
-    cdi_fee = 14.39
-    selic_fee = 14.5
-    ipc_fee = 4.0
-    ipca_fee = 6.5
-    igpm_fee = 5.0
+    cdi_fee = DefaultValues.CDI_FEE
+    selic_fee = DefaultValues.SELIC_FEE
+    ipc_fee = DefaultValues.IPC_FEE
+    ipca_fee = DefaultValues.IPCA_FEE
+    igpm_fee = DefaultValues.IGPM_FEE
 
 
-poupanca_fee = 6.17
+poupanca_fee = DefaultValues.POUPANCA_FEE
 fee_input = poupanca_fee
 index_fee = ipca_fee
-index_type = 'IPCA'
+index_type = DefaultValues.INDEX_TYPE
 
 
 # Lógica do app
 
 st.write(
-    f'<h1><center>Comparador de Renda Fixa</center></h1>',
+    Text.main_title,
     unsafe_allow_html=True
 )
 
 product = st.selectbox(
-    label='Selecione seu produto',
-    options=[
-        'CDB',
-        'Debênture',
-        'Letras de Crédito (LCA,LCI, LCD,...)',
-        'Tesouro Direto',
-        'Poupança',
-        'Caixinha Nubank'
-    ]
+    label=Text.product_label,
+    options=Menu.product_options
 )
 
-if product == 'Poupança':
+if product == Text.poupanca_label:
     st.write(
-        f'<h2><center>Comparativo do Seu Produto</center></h2>',
+        Text.comparative_title,
         unsafe_allow_html=True
     )
 
-    cdi_comparison, selic_comparison = st.columns(2) 
-    poupanca_comparison, index_comparison = st.columns(2)
+    cdi_comparison, selic_comparison = st.columns(Menu.columns_qty) 
+    poupanca_comparison, index_comparison = st.columns(Menu.columns_qty)
     cdi_comparison.metric(
         border=True,
         delta=f'{round(((fee_input-cdi_fee)/cdi_fee)*Operations.percent_value, Operations.round_value)}%',
-        label='CDI',
+        label=Text.cdi_label,
         value=f'{cdi_fee}%'
     )
         
     selic_comparison.metric(
         border=True,
         delta=f'{round(((fee_input-selic_fee)/selic_fee)*Operations.percent_value, Operations.round_value)}%',
-        label='Selic',
+        label=Text.selic_label,
         value=f'{selic_fee}%',
     )
 
     poupanca_comparison.metric(
         border=True,
         delta=f'{round(((fee_input-poupanca_fee)/poupanca_fee)*Operations.percent_value, Operations.round_value)}%',
-        label='Poupança',
+        label=Text.poupanca_label,
         value=f'{poupanca_fee}%',
     )
 
     index_comparison.metric(
         border=True,
-        label='Inflação', # comparar com NTN?
+        label=Text.inflation_label, # comparar com NTN?
         value=f'{round(fee_input-index_fee, Operations.round_value)}%+{index_type}'
     )
 else:
     # with st.form(key="bond_form"):
     bond_type = st.radio(
-        label='Selecione o tipo de rendimento',
-        options=[
-            # 'Não sei',
-            'Taxa Pré-fixada (ex: 10% a.a.)',
-            'Taxa Pós-fixada (em porcentagem; ex: 90% do CDI)',
-            'Taxa + CDI (ex: 1% + CDI)',
-            'Taxa + Selic (ex: 1% + Selic)',
-            'Taxa + Inflação (ex: 1% + IPCA)',
-        ]
+        label=Text.yield_title,
+        options=Menu.yield_options
     )
 
-    if bond_type == 'Taxa + Inflação (ex: 1% + IPCA)':
+    if bond_type == Text.inflation_yield:
         index_type = st.radio(
-            label='Selecione o tipo de indexador',
-            options=[
-                'IPCA',
-                'IGPM',
-                'IPC'
-            ]
+            label=Text.inflation_index_label,
+            options=Menu.inflation_index_options
         )
 
     maturity_type = st.radio(
-        label='Informe a data de vencimento',
-        options=[
-            'Não sei',
-            'Data de Vencimento',
-            'Prazo de Vencimento (em dias)'
-        ]
+        label=Text.maturity_label,
+        options=Menu.maturity_options
     )
 
-    if maturity_type == 'Data de Vencimento':
+    if maturity_type == Text.maturity_date_label:
         maturity_date = datetime.combine(
             date=st.date_input(
-                label='Data',
-                format='DD/MM/YYYY',
+                label=Text.date_label,
+                format=Text.date_input_format,
                 value=default_date
             ),
             time=today.time()
         )
         maturity_in_days = (maturity_date - today).days
-    elif maturity_type == 'Prazo de Vencimento (em dias)':
+    elif maturity_type == Text.maturity_in_days:
         maturity_in_days = st.number_input(
-            label='Informe o prazo de vencimento (em dias)',
-            min_value=1
+            label=Text.days_maturity_label,
+            min_value=Operations.factor_base
         )
     else:
         maturity_date = default_date
         maturity_in_days = (maturity_date - today).days
 
-    if maturity_type != 'Não sei':
+    if maturity_type != Text.unknown_maturity:
         hold_until_maturity = st.radio(
-            label='Você pretende manter até o vencimento?',
-            options=[
-                'Sim',
-                'Não'
-            ]
+            label=Text.retain_to_maturity_label,
+            options=Menu.retain_to_maturity_options
         )
-        if hold_until_maturity == 'Não':
+        if hold_until_maturity == Text.not_hold_to_maturity:
             maturity_in_days = st.number_input(
-                label='Informe o tempo que pretende manter o produto (em dias)',
-                min_value=1
+                label=Text.maturity_hold_label,
+                min_value=Operations.factor_base
             )
 
     fee_input = st.text_input(
-        label='Informe a taxa de rendimento (ou taxa de referência para o pós-fixado: ex. 95,3 para 95,3% CDI)'
+        label=Text.fee_input_label
     )
 
     # submitted = st.form_submit_button("Comparar Produto")
@@ -189,71 +165,71 @@ else:
     # if submitted and fee_input:
     if fee_input:
         index_dict = {
-            'IPCA': ipca_fee,
-            'IGPM': igpm_fee,
-            'IPC': ipc_fee
+            DefaultValues.INDEX_TYPE: ipca_fee,
+            Text.igpm_label: igpm_fee,
+            Text.ipc_label: ipc_fee
         }
 
-        index_fee = index_dict.get(index_type, 'IPCA')
+        index_fee = index_dict.get(index_type, DefaultValues.INDEX_TYPE)
 
         fee_input = float(str(fee_input).replace(",", "."))
         
         bond_fee_by_type = {
-            'Taxa Pós-fixada (em porcentagem; ex: 90% do CDI)': (fee_input / Operations.percent_value) * cdi_fee,
-            'Taxa + CDI (ex: 1% + CDI)': fee_input + cdi_fee,
-            'Taxa + Selic (ex: 1% + Selic)': fee_input + selic_fee,
-            'Taxa + Inflação (ex: 1% + IPCA)': fee_input + index_fee
+            Text.post_fixed_option_label: (fee_input / Operations.percent_value) * cdi_fee,
+            Text.cdi_option_label: fee_input + cdi_fee,
+            Text.selic_option_label: fee_input + selic_fee,
+            Text.inflation_option_label: fee_input + index_fee
         }
 
         fee_input = bond_fee_by_type.get(bond_type, fee_input)
 
-        if product == 'Letras de Crédito (LCA,LCI, LCD,...)':
-            tax_fees = 0
-        elif maturity_in_days <= 180:
-            tax_fees = 0.225
-        elif maturity_in_days <= 360:
-            tax_fees = 0.2
-        elif maturity_in_days <= 720:
-            tax_fees = 0.175
+        if product == Text.credit_letters_label:
+            tax_fees = Tax.free_tax
+        elif maturity_in_days <= Tax.semester_range:
+            tax_fees = Tax.semester_fee
+        elif maturity_in_days <= Tax.anual_range:
+            tax_fees = Tax.anual_fee
+        elif maturity_in_days <= Tax.bianual_range:
+            tax_fees = Tax.bianual_fee
         else:
-            tax_fees = 0.15
+            tax_fees = Tax.beyond_fee
 
-        liquid_fee = round(fee_input * (1 - tax_fees), Operations.round_value)
+        liquid_fee = round(fee_input * (Operations.factor_base - tax_fees), Operations.round_value)
 
         st.write(
-            f'<h2><center>Comparativo do Seu Produto</center></h2>',
+            Text.result_title,
             unsafe_allow_html=True
         )
         st.write(
-            f'<p><h3><center>Rendimento Líquido: {liquid_fee}%*</p> <p>*Com o resgate em {maturity_in_days} dias</p></center></h3>',
+            Text.liquid_fee_title.format(liquid_fee=liquid_fee, maturity_in_days=maturity_in_days),
             unsafe_allow_html=True
         )
 
-        cdi_comparison, selic_comparison = st.columns(2) 
-        poupanca_comparison, index_comparison = st.columns(2)
+        cdi_comparison, selic_comparison = st.columns(Menu.columns_qty) 
+        poupanca_comparison, index_comparison = st.columns(Menu.columns_qty)
         cdi_comparison.metric(
             border=True,
             delta=f'{round(((fee_input-cdi_fee)/cdi_fee)*Operations.percent_value, Operations.round_value)}%',
-            label='CDI',
+            label=Text.cdi_label,
             value=f'{cdi_fee}%'
         )
             
         selic_comparison.metric(
             border=True,
             delta=f'{round(((fee_input-selic_fee)/selic_fee)*Operations.percent_value, Operations.round_value)}%',
-            label='Selic',
+            label=Text.selic_label,
             value=f'{selic_fee}%',
         )
 
         poupanca_comparison.metric(
             border=True,
             delta=f'{round(((fee_input-poupanca_fee)/poupanca_fee)*Operations.percent_value, Operations.round_value)}%',
-            label='Poupança',
+            label=Text.poupanca_label,
             value=f'{poupanca_fee}%',
         )
 
         index_comparison.metric(
             border=True,
-            label='Inflação',
+            label=Text.inflation_label,
             value=f'{round(fee_input-index_fee, Operations.round_value)}%+{index_type}'
         )
