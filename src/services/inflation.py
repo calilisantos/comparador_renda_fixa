@@ -1,4 +1,4 @@
-from models.inflation import InflationTypes
+from configs.inflation import InflationTypes
 
 
 class InflationService:

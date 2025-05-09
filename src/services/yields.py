@@ -1,41 +1,26 @@
-from functools import reduce
-from models.yields import DefaultValues, Operations
-from models.request import Request
-from services.request import RequestService
+from configs.components import Text
+from models.yield_types import YieldType
+from models.yields import Operations
 
+class YieldService:
+    def __init__(self, base_yields: dict, yield_input: str, bond_type: YieldType):
+        self._base_yields = base_yields
+        self._yield_input = self._sanitize_yield(yield_input)
+        self._bond_type = bond_type
 
-class YieldsService:
-    @staticmethod
-    def _get_ratio(response, ratio_code):
-        if ratio_code == Request.selic_code:
-            return float(response[Request.response_index].get(Request.ratio_key))
-        elif ratio_code == Request.cdi_code:
-            value = float(response[Request.response_index].get(Request.ratio_key)) / Operations.percent_value
-            return round(
-                (((Operations.factor_base + value) ** Operations.util_days) - Operations.factor_base) * Operations.percent_value
-                , Operations.round_value
-            )
-        else:
-            compound_value = reduce(
-                lambda acc, curr: (
-                    (
-                        (Operations.factor_base + (acc/Operations.percent_value)) *
-                        (Operations.factor_base + (float(curr[Request.ratio_key]) / Operations.percent_value))
-                    ) - Operations.factor_base
-                ) * Operations.percent_value,
-                response[-Request.response_range:],
-                Operations.reduce_initial
-            )
-            return round(compound_value, Operations.round_value)
+    def _sanitize_yield(self, value):
+        return float(str(value).replace(",", "."))
 
-    @classmethod
-    def get_yield(cls, ratio_code, request_date):
-        try:
-            response = RequestService.fetch_data(
-                endpoint=Request.bacen_endpoint,
-                ratio_code=ratio_code,
-                request_date=request_date
-            )
-            return cls._get_ratio(response, ratio_code)
-        except Exception:
-            return DefaultValues.map_default.get(ratio_code)
+    def compound_yield(self):
+        strategy = {
+            YieldType.PRE_FIXED: lambda: self._yield_input,
+            YieldType.POST_FIXED: lambda: (self._yield_input / Operations.percent_value) * self._base_yields["CDI"],
+            YieldType.CDI: lambda: self._yield_input + self._base_yields.get(Text.cdi_label),
+            YieldType.SELIC: lambda: self._yield_input + self._base_yields.get(Text.selic_label),
+            YieldType.INFLATION: lambda: self._yield_input + self._base_yields.get(Text.inflation_label),
+        }.get(self._bond_type)
+
+        if strategy is None:
+            raise ValueError(Text.invalid_bond_type_message)
+
+        return strategy()

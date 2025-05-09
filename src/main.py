@@ -1,9 +1,11 @@
+from domain.index_facade import IndexFacade
 from domain.yield_facade import YieldFacade
+from configs.inflation import InflationTypes
 from models.yields import Operations, Tax
 from services.date import DateService
 from services.inflation import InflationService
 from datetime import datetime
-from interfaces.components import Menu, Text
+from configs.components import Menu, Text
 import streamlit as st
 
 
@@ -11,13 +13,13 @@ today = datetime.now() # ver aonde colocar. É usada no request e no deal com da
 
 default_date = DateService(current_date=today).set_default_date() # é usada em maturity_date. tirar daqui
 
-yields = YieldFacade(current_date=today).get_all_yields()
-cdi_yield = yields["cdi"]
-selic_yield = yields["selic"]
-poupanca_yield = yields["poupanca"]
+yields = IndexFacade(current_date=today).get_all_yields()
+cdi_yield = yields.get(Text.cdi_label)
+selic_yield = yields.get(Text.selic_label)
+poupanca_yield = yields.get(Text.poupanca_label)
 
 yield_input = poupanca_yield
-index_type = Text.ipca_label
+index_type = InflationTypes.DEFAULT
 index_yield = InflationService(yields=yields).resolve_yield()
 
 
@@ -125,37 +127,27 @@ else:
     if yield_input:
         index_yield = InflationService(index_type=index_type, yields=yields).resolve_yield()
 
-        yield_input = float(str(yield_input).replace(",", "."))
-        
-        bond_yield_by_type = {
-            Text.post_fixed_option_label: (yield_input / Operations.percent_value) * cdi_yield,
-            Text.cdi_option_label: yield_input + cdi_yield,
-            Text.selic_option_label: yield_input + selic_yield,
-            Text.inflation_option_label: yield_input + index_yield
+        base_fields = {
+            "CDI": cdi_yield,
+            "SELIC": selic_yield,
+            "INFLATION": index_yield
         }
 
-        yield_input = bond_yield_by_type.get(bond_type, yield_input)
+        is_tax_free = product == Text.credit_letters_label
 
-        if maturity_in_days <= Tax.semester_range:
-            tax_yields = Tax.semester_yield
-        elif maturity_in_days <= Tax.anual_range:
-            tax_yields = Tax.anual_yield
-        elif maturity_in_days <= Tax.bianual_range:
-            tax_yields = Tax.bianual_yield
-        else:
-            tax_yields = Tax.beyond_yield
+        yield_input, liquid_yield = YieldFacade(base_yields=base_fields).calculate(
+            bond_type_label=bond_type, 
+            yield_input=yield_input, 
+            maturity_days=maturity_in_days, 
+            tax_free=is_tax_free
+        )
 
-        def set_tax_adjusted(yield_value, tax_yield):
-            return round(yield_value * (Operations.factor_base - tax_yield), Operations.round_value)
-
-        if product == Text.credit_letters_label:
-            liquid_yield = set_tax_adjusted(yield_value=yield_input, tax_yield=Tax.free_tax)
-            yield_input = set_tax_adjusted(yield_value=yield_input, tax_yield=-tax_yields)
-            liquid_title = Text.credit_letters_title.format(liquid_yield=liquid_yield, maturity_in_days=maturity_in_days, yield_input=yield_input)
-        else:
-            liquid_yield = set_tax_adjusted(yield_value=yield_input, tax_yield=tax_yields)
-            liquid_title = Text.liquid_yield_title.format(liquid_yield=liquid_yield, maturity_in_days=maturity_in_days)
-
+        liquid_title = (
+            Text.credit_letters_title.format(liquid_yield=liquid_yield, maturity_in_days=maturity_in_days, yield_input=yield_input) 
+            if is_tax_free
+            else Text.liquid_yield_title.format(liquid_yield=liquid_yield, maturity_in_days=maturity_in_days)
+        )
+        
         st.write(
             Text.result_title,
             unsafe_allow_html=True

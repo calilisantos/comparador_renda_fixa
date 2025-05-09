@@ -1,7 +1,6 @@
-from dataclasses import dataclass
+from configs.inflation import InflationTypes
 
 
-@dataclass
 class Text:
     cdi_label = 'CDI'
     cdi_option_label = 'Taxa + CDI (ex: 1% + CDI)'
@@ -16,6 +15,7 @@ class Text:
     inflation_label = 'Inflação'
     inflation_option_label = 'Taxa + Inflação (ex: 1% + IPCA)'
     inflation_yield = 'Taxa + Inflação (ex: 1% + IPCA)'
+    invalid_bond_type_message = 'Tipo de rendimento inválido'
     liquid_yield_title = '<p><h3><center>Rendimento Líquido: {liquid_yield}%*</p> <p>*Com o resgate em {maturity_in_days} dias</p></center></h3>'
     main_title = f'<h1><center>Comparador de Renda Fixa</center></h1>'
     maturity_date_label = 'Data de Vencimento'
@@ -24,6 +24,7 @@ class Text:
     maturity_label = 'Informe a data de vencimento'
     not_hold_to_maturity = 'Não'
     post_fixed_option_label = 'Taxa Pós-fixada (em porcentagem; ex: 90% do CDI)'
+    pre_fixed_option_label = 'Taxa Pré-fixada (ex: 10% a.a.)'
     poupanca_label = 'Poupança'
     product_label = 'Selecione seu produto'
     result_title = f'<h2><center>Comparativo do Seu Produto</center></h2>'
@@ -37,32 +38,32 @@ class Text:
 class Menu:
     columns_qty = 2
     inflation_index_options = [
-        'IPC',
-        'IPCA',
-        'IGPM'
+        InflationTypes.IPC,
+        InflationTypes.IPCA,
+        InflationTypes.IGPM
     ]
     maturity_options = [
-        'Não sei',
-        'Data de Vencimento',
-        'Prazo de Vencimento (em dias)'
+        Text.unknown_maturity,
+        Text.maturity_date_label,
+        Text.maturity_in_days
     ]
     product_options = [
         'CDB',
         'Debênture',
-        'Letras de Crédito (LCA,LCI, LCD,...)',
+        Text.credit_letters_label,
         'Tesouro Direto',
-        'Poupança',
+        Text.poupanca_label,
         'Caixinha Nubank'
     ]
     retain_to_maturity_options = [
         'Sim',
-        'Não'
+        Text.not_hold_to_maturity
     ]
     yield_options = [
-        'Taxa Pré-fixada (ex: 10% a.a.)',
-        'Taxa Pós-fixada (em porcentagem; ex: 90% do CDI)',
-        'Taxa + CDI (ex: 1% + CDI)',
-        'Taxa + Selic (ex: 1% + Selic)',
-        'Taxa + Inflação (ex: 1% + IPCA)',
+        Text.pre_fixed_option_label,
+        Text.post_fixed_option_label,
+        Text.cdi_option_label,
+        Text.selic_option_label,
+        Text.inflation_option_label
     ]
 
