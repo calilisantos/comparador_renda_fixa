@@ -1,12 +1,14 @@
 from domain.index_facade import IndexFacade
 from domain.yield_facade import YieldFacade
 from configs.inflation import InflationTypes
-from models.yields import Operations, Tax
+from models.yields import Operations
 from services.date import DateService
 from services.inflation import InflationService
 from datetime import datetime
 from configs.components import Menu, Text
 import streamlit as st
+from views.home import HomeView
+from views.metrics import MetricBuilder
 
 
 today = datetime.now() # ver aonde colocar. É usada no request e no deal com data de vencimento
@@ -25,75 +27,58 @@ index_yield = InflationService(yields=yields).resolve_yield()
 
 # Lógica do app
 
-st.write(
-    Text.main_title,
-    unsafe_allow_html=True
-)
+HomeView.show_main_title()
 
-product = st.selectbox(
-    label=Text.product_label,
-    options=Menu.product_options
-)
+product = HomeView.show_products_box()
 
 if product == Text.poupanca_label:
-    st.write(
-        Text.comparative_title,
-        unsafe_allow_html=True
-    )
+    HomeView.show_result_title()
+
+    cdi__metric_delta = f'{round(((yield_input-cdi_yield)/cdi_yield)*Operations.percent_value, Operations.round_value)}%'
 
     cdi_comparison, selic_comparison = st.columns(Menu.columns_qty) 
     poupanca_comparison, index_comparison = st.columns(Menu.columns_qty)
-    cdi_comparison.metric(
-        border=True,
-        delta=f'{round(((yield_input-cdi_yield)/cdi_yield)*Operations.percent_value, Operations.round_value)}%',
-        label=Text.cdi_label,
-        value=f'{cdi_yield}%'
+
+    MetricBuilder.build_comparison(
+        column=cdi_comparison,
+        base_value=cdi_yield,
+        compared_value=yield_input,
+        label=Text.cdi_label
     )
         
-    selic_comparison.metric(
-        border=True,
-        delta=f'{round(((yield_input-selic_yield)/selic_yield)*Operations.percent_value, Operations.round_value)}%',
-        label=Text.selic_label,
-        value=f'{selic_yield}%',
+    MetricBuilder.build_comparison(
+        column=selic_comparison,
+        base_value=selic_yield,
+        compared_value=yield_input,
+        label=Text.selic_label
     )
 
-    poupanca_comparison.metric(
-        border=True,
-        delta=f'{round(((yield_input-poupanca_yield)/poupanca_yield)*Operations.percent_value, Operations.round_value)}%',
-        label=Text.poupanca_label,
-        value=f'{poupanca_yield}%',
+    MetricBuilder.build_comparison(
+        column=poupanca_comparison,
+        base_value=poupanca_yield,
+        compared_value=yield_input,
+        label=Text.poupanca_label
     )
 
-    index_comparison.metric(
-        border=True,
-        label=Text.inflation_label, # comparar com NTN?
-        value=f'{round(yield_input-index_yield, Operations.round_value)}%+{index_type}'
+    MetricBuilder.build_index(
+        column=index_comparison,
+        index_yield=index_yield,
+        compared_value=yield_input,
+        label=Text.inflation_label,
+        suffix=index_type
     )
+
 else:
-    # with st.form(key="bond_form"):
-    bond_type = st.radio(
-        label=Text.yield_title,
-        options=Menu.yield_options
-    )
+    bond_type = HomeView.show_bond_type_radio()
 
     if bond_type == Text.inflation_yield:
-        index_type = st.radio(
-            label=Text.inflation_index_label,
-            options=Menu.inflation_index_options
-        )
+        index_type = HomeView.show_index_type_radio()
 
-    maturity_type = st.radio(
-        label=Text.maturity_label,
-        options=Menu.maturity_options
-    )
+    maturity_type = HomeView.show_maturity_type_radio()
 
     if maturity_type == Text.maturity_date_label:
         maturity_date = datetime.combine(
-            date=st.date_input(
-                label=Text.date_label,
-                format=Text.date_input_format,
-                value=default_date
-            ),
+            date= HomeView.maturity_date_input(default_date=default_date),
             time=today.time()
         )
         maturity_in_days = (maturity_date - today).days
