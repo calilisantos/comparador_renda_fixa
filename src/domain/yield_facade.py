@@ -1,3 +1,4 @@
+from models.inflation import InflationTypes
 from models.request import Request
 from models.yields import DefaultValues
 from services.date import DateService
@@ -14,8 +15,8 @@ class YieldFacade:
         return {
             "cdi": YieldsService.get_yield(Request.cdi_code, self.yields_request_date),
             "selic": YieldsService.get_yield(Request.selic_code, self.yields_request_date),
-            "ipc": YieldsService.get_yield(Request.ipc_code, self.index_request_date),
-            "ipca": YieldsService.get_yield(Request.ipca_code, self.index_request_date),
-            "igpm": YieldsService.get_yield(Request.igpm_code, self.index_request_date),
-            "poupanca": DefaultValues.POUPANCA_YIELD
+            "poupanca": DefaultValues.POUPANCA_YIELD,
+            InflationTypes.IPC: YieldsService.get_yield(Request.ipc_code, self.index_request_date),
+            InflationTypes.IPCA: YieldsService.get_yield(Request.ipca_code, self.index_request_date),
+            InflationTypes.IGPM: YieldsService.get_yield(Request.igpm_code, self.index_request_date)
         }

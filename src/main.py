@@ -1,8 +1,7 @@
 from domain.yield_facade import YieldFacade
-from models.yields import DefaultValues, Operations, Tax
-from models.request import Request
+from models.yields import Operations, Tax
 from services.date import DateService
-from services.yields import YieldsService
+from services.inflation import InflationService
 from datetime import datetime
 from interfaces.components import Menu, Text
 import streamlit as st
@@ -15,14 +14,11 @@ default_date = DateService(current_date=today).set_default_date() # é usada em 
 yields = YieldFacade(current_date=today).get_all_yields()
 cdi_yield = yields["cdi"]
 selic_yield = yields["selic"]
-ipc_yield = yields["ipc"]
-ipca_yield = yields["ipca"]
-igpm_yield = yields["igpm"]
 poupanca_yield = yields["poupanca"]
 
 yield_input = poupanca_yield
-index_yield = ipca_yield
-index_type = DefaultValues.INDEX_TYPE # pensar em colocar nas interfaces
+index_type = Text.ipca_label
+index_yield = InflationService(yields=yields).resolve_yield()
 
 
 # Lógica do app
@@ -127,13 +123,7 @@ else:
 
     # if submitted and yield_input:
     if yield_input:
-        index_dict = {
-            DefaultValues.INDEX_TYPE: ipca_yield,
-            Text.igpm_label: igpm_yield,
-            Text.ipc_label: ipc_yield
-        }
-
-        index_yield = index_dict.get(index_type, DefaultValues.INDEX_TYPE)
+        index_yield = InflationService(index_type=index_type, yields=yields).resolve_yield()
 
         yield_input = float(str(yield_input).replace(",", "."))
         

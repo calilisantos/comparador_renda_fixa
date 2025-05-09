@@ -9,8 +9,6 @@ class DefaultValues:
     IPCA_YIELD = 6.5
     IGPM_YIELD = 5.0
     POUPANCA_YIELD = 6.17
-    INDEX_TYPE = 'IPCA'
-
 
 @dataclass
 class Operations:
