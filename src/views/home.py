@@ -37,9 +37,9 @@ class HomeView:
     @staticmethod
     def show_bond_type_radio():
         return st.radio(
-        label=Text.yield_title,
-        options=Menu.yield_options
-    )
+            label=Text.yield_title,
+            options=Menu.yield_options
+        )
 
     @staticmethod
     def show_index_type_radio():
@@ -71,10 +71,11 @@ class HomeView:
         )
 
     @staticmethod
-    def show_hold_until_maturity_radio():
+    def show_hold_until_maturity_radio(key):
         return st.radio(
             label=Text.retain_to_maturity_label,
-            options=Menu.retain_to_maturity_options
+            options=Menu.retain_to_maturity_options,
+            key=key
         )
     
     @staticmethod

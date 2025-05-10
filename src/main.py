@@ -67,24 +67,24 @@
 #     if bond_type == Text.inflation_yield:
 #         index_type = HomeView.show_index_type_radio()
 
-#     maturity_type = HomeView.show_maturity_type_radio()
+    # maturity_type = HomeView.show_maturity_type_radio()
 
-#     if maturity_type == Text.maturity_date_label:
-#         maturity_date = datetime.combine(
-#             date= HomeView.show_maturity_date_input(default_date=default_date),
-#             time=today.time()
-#         )
-#         maturity_in_days = (maturity_date - today).days
-#     elif maturity_type == Text.maturity_in_days:
-#         maturity_in_days = HomeView.show_maturity_in_days_input()
-#     else:
-#         maturity_date = default_date
-#         maturity_in_days = (maturity_date - today).days
+    # if maturity_type == Text.maturity_date_label:
+    #     maturity_date = datetime.combine(
+    #         date= HomeView.show_maturity_date_input(default_date=default_date),
+    #         time=today.time()
+    #     )
+    #     maturity_in_days = (maturity_date - today).days
+    # elif maturity_type == Text.maturity_in_days:
+    #     maturity_in_days = HomeView.show_maturity_in_days_input()
+    # else:
+    #     maturity_date = default_date
+    #     maturity_in_days = (maturity_date - today).days
 
-#     if maturity_type != Text.unknown_maturity:
-#         hold_until_maturity = HomeView.show_hold_until_maturity_radio()
-#         if hold_until_maturity == Text.not_hold_to_maturity:
-#             maturity_in_days = HomeView.show_hold_in_days_input()
+    # if maturity_type != Text.unknown_maturity:
+    #     hold_until_maturity = HomeView.show_hold_until_maturity_radio()
+    #     if hold_until_maturity == Text.not_hold_to_maturity:
+    #         maturity_in_days = HomeView.show_hold_in_days_input()
 
 #     yield_input = HomeView.show_yield_input()
 
@@ -150,4 +150,16 @@
 from controllers.home_controller import HomeController
 
 if __name__ == "__main__":
-    HomeController().render()
+    HomeController().run()
+
+# from datetime import datetime
+# from controllers.home_controller import HomeController
+# from views.home import HomeView
+
+# def main():
+#     HomeView.show_main_title()
+#     product = HomeView.show_products_box()
+#     HomeController(today=datetime.now()).render(product)
+
+# if __name__ == "__main__":
+#     main()

@@ -6,9 +6,6 @@ class DateService:
     def __init__(self, current_date):
         self._current_date = current_date
         self.__date_formated = Date.DATE_FORMAT
-        self.default_date = None
-        self.index_request_date = None
-        self.yields_request_date = None
 
     def __transform_date(self, days_diff, date_format=None):
         if date_format:
@@ -32,3 +29,6 @@ class DateService:
             days_diff=Date.yields_days_delay,
             date_format=self.__date_formated
         )
+
+    def set_unknown_maturity_date(self):
+        return self.__transform_date(days_diff=Date.default_days_delay)

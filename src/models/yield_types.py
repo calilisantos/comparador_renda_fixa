@@ -31,3 +31,11 @@ class YieldType(Enum):
     @classmethod
     def choices(cls):
         return list(cls.label_map().values())
+
+    def base_key(self):
+        base_keys = {
+            YieldType.CDI: "CDI",
+            YieldType.SELIC: "SELIC",
+            YieldType.INFLATION: "INFLATION",
+        }
+        return base_keys.get(self)

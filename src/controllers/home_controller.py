@@ -1,6 +1,5 @@
 from datetime import datetime
 import streamlit as st
-
 from configs.components import Menu, Text
 from configs.inflation import InflationTypes
 from domain.index_facade import IndexFacade
@@ -16,119 +15,97 @@ class HomeController:
         self.today = datetime.now()
         self.default_date = DateService(current_date=self.today).set_default_date()
         self.yields = IndexFacade(current_date=self.today).get_all_yields()
-        self._prepare_base_yields()
+        self.base_fields = {
+            "CDI": self.yields.get(Text.cdi_label),
+            "SELIC": self.yields.get(Text.selic_label),
+            "INFLATION": InflationService(yields=self.yields).resolve_yield()
+        }
 
-    def _prepare_base_yields(self):
-        self.cdi = self.yields.get(Text.cdi_label)
-        self.selic = self.yields.get(Text.selic_label)
-        self.poupanca = self.yields.get(Text.poupanca_label)
-
-    def render(self):
+    def run(self):
         HomeView.show_main_title()
         product = HomeView.show_products_box()
 
         if product == Text.poupanca_label:
-            self._render_poupanca_comparisons()
+            self._handle_poupanca()
         else:
-            self._render_fixed_income_flow(product)
+            self._handle_yield_comparison(product)
 
-    def _render_poupanca_comparisons(self):
-        HomeView.show_result_title()
+    def _build_metrics(self, compared_yield, index_type=InflationTypes.DEFAULT):
         cdi_col, selic_col = st.columns(Menu.columns_qty)
         poupanca_col, index_col = st.columns(Menu.columns_qty)
 
-        for col, label, base in [
-            (cdi_col, Text.cdi_label, self.cdi),
-            (selic_col, Text.selic_label, self.selic),
-            (poupanca_col, Text.poupanca_label, self.poupanca)
-        ]:
-            MetricBuilder.build_comparison(
-                column=col, label=label,
-                base_value=base,
-                compared_value=self.poupanca
-            )
+        MetricBuilder.build_comparison(cdi_col, self.base_fields["CDI"], compared_yield, Text.cdi_label)
+        MetricBuilder.build_comparison(selic_col, self.base_fields["SELIC"], compared_yield, Text.selic_label)
+        MetricBuilder.build_comparison(poupanca_col, self.yields.get(Text.poupanca_label), compared_yield, Text.poupanca_label)
+        MetricBuilder.build_index(index_col, self.base_fields["INFLATION"], compared_yield, Text.inflation_label, suffix=index_type)
 
-        index_yield = InflationService(yields=self.yields).resolve_yield()
-        MetricBuilder.build_index(
-            column=index_col,
-            index_yield=index_yield,
-            compared_value=self.poupanca,
-            label=Text.inflation_label,
-            suffix=InflationTypes.DEFAULT
-        )
 
-    def _render_fixed_income_flow(self, product):
+    def _handle_poupanca(self):
+        HomeView.show_result_title()
+
+        yield_input = self.yields.get(Text.poupanca_label)
+        self._build_metrics(compared_yield=yield_input)
+
+    def _handle_yield_comparison(self, product):
         bond_type = HomeView.show_bond_type_radio()
+        index_type = InflationTypes.DEFAULT
 
         if bond_type == Text.inflation_yield:
             index_type = HomeView.show_index_type_radio()
-        else:
-            index_type = InflationTypes.DEFAULT
 
+        maturity_in_days = self._get_maturity_in_days()
+
+        # if maturity_in_days is not None:
+        #     if HomeView.show_hold_until_maturity_radio(key="know_maturity") == Text.not_hold_to_maturity:
+        #         maturity_in_days = HomeView.show_hold_in_days_input()
+
+        yield_input = HomeView.show_yield_input()
+
+        if yield_input:
+            self.base_fields["INFLATION"] = InflationService(index_type=index_type, yields=self.yields).resolve_yield()
+            is_tax_free = product == Text.credit_letters_label
+
+            gross_yield, net_yield = YieldFacade(base_yields=self.base_fields).calculate(
+                bond_type_label=bond_type,
+                yield_input=yield_input,
+                maturity_days=maturity_in_days,
+                tax_free=is_tax_free
+            )
+
+            HomeView.show_result_title()
+            HomeView.show_liquid_title(
+                Text.credit_letters_title.format(liquid_yield=net_yield, maturity_in_days=maturity_in_days, yield_input=gross_yield)
+                if is_tax_free
+                else Text.liquid_yield_title.format(liquid_yield=net_yield, maturity_in_days=maturity_in_days)
+            )
+
+            self._build_metrics(compared_yield=gross_yield, index_type=index_type)
+
+    def _get_maturity_in_days(self):
         maturity_type = HomeView.show_maturity_type_radio()
 
         if maturity_type == Text.maturity_date_label:
             maturity_date = datetime.combine(
-                date=HomeView.show_maturity_date_input(self.default_date),
+                date=HomeView.show_maturity_date_input(default_date=self.default_date),
                 time=self.today.time()
             )
-            maturity_days = (maturity_date - self.today).days
+            maturity_in_days = (maturity_date - self.today).days
+
         elif maturity_type == Text.maturity_in_days:
-            maturity_days = HomeView.show_maturity_in_days_input()
+            maturity_in_days = HomeView.show_maturity_in_days_input()
+
         else:
-            maturity_days = (self.default_date - self.today).days
+            unknown_date = DateService(current_date=self.today).set_unknown_maturity_date()
+            # maturity_in_days = (unknown_date - self.today).days
+            return (unknown_date - self.today).days
 
-        if maturity_type != Text.unknown_maturity:
-            hold_radio = HomeView.show_hold_until_maturity_radio()
-            if hold_radio == Text.not_hold_to_maturity:
-                maturity_days = HomeView.show_hold_in_days_input()
+        # if maturity_type != Text.unknown_maturity:
+        #     hold_until_maturity = HomeView.show_hold_until_maturity_radio(key="unknown_maturity")
+        #     if hold_until_maturity == Text.not_hold_to_maturity:
+        #         maturity_in_days = HomeView.show_hold_in_days_input()
+        hold_key = f"hold_until_maturity_{maturity_type}"  # chave única para evitar conflito
+        hold_until_maturity = HomeView.show_hold_until_maturity_radio(key=hold_key)
+        if hold_until_maturity == Text.not_hold_to_maturity:
+            return HomeView.show_hold_in_days_input()
 
-        yield_input = HomeView.show_yield_input()
-
-        if not yield_input:
-            return
-
-        index_yield = InflationService(index_type=index_type, yields=self.yields).resolve_yield()
-
-        yield_input, liquid_yield = YieldFacade(base_yields={
-            "CDI": self.cdi,
-            "SELIC": self.selic,
-            "INFLATION": index_yield
-        }).calculate(
-            bond_type_label=bond_type,
-            yield_input=yield_input,
-            maturity_days=maturity_days,
-            tax_free=(product == Text.credit_letters_label)
-        )
-
-        liquid_title = (
-            Text.credit_letters_title.format(liquid_yield=liquid_yield, maturity_in_days=maturity_days, yield_input=yield_input)
-            if product == Text.credit_letters_label
-            else Text.liquid_yield_title.format(liquid_yield=liquid_yield, maturity_in_days=maturity_days)
-        )
-
-        HomeView.show_result_title()
-        HomeView.show_liquid_title(liquid_title)
-
-        cdi_col, selic_col = st.columns(Menu.columns_qty)
-        poupanca_col, index_col = st.columns(Menu.columns_qty)
-
-        for col, label, base in [
-            (cdi_col, Text.cdi_label, self.cdi),
-            (selic_col, Text.selic_label, self.selic),
-            (poupanca_col, Text.poupanca_label, self.poupanca)
-        ]:
-            MetricBuilder.build_comparison(
-                column=col,
-                label=label,
-                base_value=base,
-                compared_value=yield_input
-            )
-
-        MetricBuilder.build_index(
-            column=index_col,
-            index_yield=index_yield,
-            compared_value=yield_input,
-            label=Text.inflation_label,
-            suffix=index_type
-        )
+        return maturity_in_days

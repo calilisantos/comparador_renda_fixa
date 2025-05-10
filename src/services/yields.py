@@ -15,9 +15,9 @@ class YieldService:
         strategy = {
             YieldType.PRE_FIXED: lambda: self._yield_input,
             YieldType.POST_FIXED: lambda: (self._yield_input / Operations.percent_value) * self._base_yields["CDI"],
-            YieldType.CDI: lambda: self._yield_input + self._base_yields.get(Text.cdi_label),
-            YieldType.SELIC: lambda: self._yield_input + self._base_yields.get(Text.selic_label),
-            YieldType.INFLATION: lambda: self._yield_input + self._base_yields.get(Text.inflation_label),
+            YieldType.CDI: lambda: self._yield_input + self._base_yields.get(self._bond_type.base_key()),
+            YieldType.SELIC: lambda: self._yield_input + self._base_yields.get(self._bond_type.base_key()),
+            YieldType.INFLATION: lambda: self._yield_input + self._base_yields.get(self._bond_type.base_key()),
         }.get(self._bond_type)
 
         if strategy is None:
