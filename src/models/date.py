@@ -1,7 +1,3 @@
-from dataclasses import dataclass
-
-## usar na service, que faz o request das taxas
-@dataclass
 class Date:
     DATE_FORMAT = "%d/%m/%Y"
     default_days_delay = 360

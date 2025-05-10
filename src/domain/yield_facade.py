@@ -1,6 +1,6 @@
 from configs.components import Text
 from models.yields import Operations, Tax
-from models.yield_types import YieldType
+from configs.yield_types import YieldType
 from services.yields import YieldService
 
 class YieldFacade:

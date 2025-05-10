@@ -1,5 +1,5 @@
 from configs.components import Text
-from models.yield_types import YieldType
+from configs.yield_types import YieldType
 from models.yields import Operations
 
 class YieldService:
@@ -14,7 +14,9 @@ class YieldService:
     def compound_yield(self):
         strategy = {
             YieldType.PRE_FIXED: lambda: self._yield_input,
-            YieldType.POST_FIXED: lambda: (self._yield_input / Operations.percent_value) * self._base_yields["CDI"],
+            YieldType.POST_FIXED: lambda: (
+                self._yield_input / Operations.percent_value
+            ) * self._base_yields[YieldType.CDI.base_key()],
             YieldType.CDI: lambda: self._yield_input + self._base_yields.get(self._bond_type.base_key()),
             YieldType.SELIC: lambda: self._yield_input + self._base_yields.get(self._bond_type.base_key()),
             YieldType.INFLATION: lambda: self._yield_input + self._base_yields.get(self._bond_type.base_key()),

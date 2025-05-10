@@ -2,6 +2,7 @@ from datetime import datetime
 import streamlit as st
 from configs.components import Menu, Text
 from configs.inflation import InflationTypes
+from configs.yield_types import YieldType
 from domain.index_facade import IndexFacade
 from domain.yield_facade import YieldFacade
 from services.date import DateService
@@ -16,9 +17,9 @@ class HomeController:
         self.default_date = DateService(current_date=self.today).set_default_date()
         self.yields = IndexFacade(current_date=self.today).get_all_yields()
         self.base_fields = {
-            "CDI": self.yields.get(Text.cdi_label),
-            "SELIC": self.yields.get(Text.selic_label),
-            "INFLATION": InflationService(yields=self.yields).resolve_yield()
+            YieldType.CDI.base_key(): self.yields.get(Text.cdi_label),
+            YieldType.SELIC.base_key(): self.yields.get(Text.selic_label),
+            YieldType.INFLATION.base_key(): InflationService(yields=self.yields).resolve_yield()
         }
 
     def run(self):
@@ -54,10 +55,6 @@ class HomeController:
             index_type = HomeView.show_index_type_radio()
 
         maturity_in_days = self._get_maturity_in_days()
-
-        # if maturity_in_days is not None:
-        #     if HomeView.show_hold_until_maturity_radio(key="know_maturity") == Text.not_hold_to_maturity:
-        #         maturity_in_days = HomeView.show_hold_in_days_input()
 
         yield_input = HomeView.show_yield_input()
 
@@ -96,14 +93,9 @@ class HomeController:
 
         else:
             unknown_date = DateService(current_date=self.today).set_unknown_maturity_date()
-            # maturity_in_days = (unknown_date - self.today).days
             return (unknown_date - self.today).days
 
-        # if maturity_type != Text.unknown_maturity:
-        #     hold_until_maturity = HomeView.show_hold_until_maturity_radio(key="unknown_maturity")
-        #     if hold_until_maturity == Text.not_hold_to_maturity:
-        #         maturity_in_days = HomeView.show_hold_in_days_input()
-        hold_key = f"hold_until_maturity_{maturity_type}"  # chave única para evitar conflito
+        hold_key = f"hold_until_maturity_{maturity_type}"
         hold_until_maturity = HomeView.show_hold_until_maturity_radio(key=hold_key)
         if hold_until_maturity == Text.not_hold_to_maturity:
             return HomeView.show_hold_in_days_input()

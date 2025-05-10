@@ -4,7 +4,6 @@ from configs.inflation import InflationTypes
 class Text:
     cdi_label = 'CDI'
     cdi_option_label = 'Taxa + CDI (ex: 1% + CDI)'
-    # comparative_title = f'<h2><center>Comparativo do Seu Produto</center></h2>'
     credit_letters_label = 'Letras de Crédito (LCA,LCI, LCD,...)'
     credit_letters_title = '<p><h3><center>Rendimento Líquido: {liquid_yield}%*</p> <p><strong>Rendimento equivalente {yield_input}%**</strong></p> <p>*Com o resgate em {maturity_in_days} dias</p> <p>**Considerando a compensação tributária. Usado no comparativo abaixo:</p></center></h3>'
     date_input_format = 'DD/MM/YYYY'
