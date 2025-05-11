@@ -3,7 +3,7 @@
 Este projeto é uma aplicação em **Streamlit** que permite comparar diferentes produtos de investimento de renda fixa, como **CDBs**, **LCIs**, **LCAs** e **Tesouro Direto**, com base em **taxas atuais de mercado** e **parâmetros personalizados**.
 
 ## Link da aplicação:
-<https://comparador-renda-fixa.streamlit.app/>
+<a href="https://comparador-renda-fixa.streamlit.app/" target="_blank">https://comparador-renda-fixa.streamlit.app/</a>
 
 # <a id='topicos'>Tópicos</a>
 - [Executando projeto](#executing)
@@ -40,7 +40,7 @@ docker build -t comparador_renda_fixa .
 docker run -p 8501:8501 comparador_renda_fixa
 ```
 * Acesse a aplicação em:
-<http://localhost:8501>
+<a href="http://localhost:8501" target="_blank">http://localhost:8501</a>
 
 ## <a id='arch'>[Arquitetura do projeto](#topicos)</a>
 
