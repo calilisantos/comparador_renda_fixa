@@ -92,6 +92,7 @@ No seu servidor local, na porta 8501, ou no link, a aplicação deve ficar dispo
 
 ![comparador gif](docs/app.gif)
 
+No arquivo [mvp/main.py](mvp/main.py) é possível consultar a versão MVP do app.
 
 ## <a id='next'>[Próximos Passos](#topicos)</a>
 ### Refatoração de Controllers e Views
