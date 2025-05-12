@@ -1,7 +1,7 @@
 from dataclasses import dataclass
+from models.request import Request
 
 
-# @dataclass
 class DefaultValues:
     CDI_YIELD = 14.39
     SELIC_YIELD = 14.5
@@ -9,6 +9,14 @@ class DefaultValues:
     IPCA_YIELD = 6.5
     IGPM_YIELD = 5.0
     POUPANCA_YIELD = 6.17
+
+    map_default = {
+        Request.cdi_code: CDI_YIELD,
+        Request.ipc_code: IPC_YIELD,
+        Request.ipca_code: IPCA_YIELD,
+        Request.igpm_code: IGPM_YIELD,
+        Request.selic_code: SELIC_YIELD
+    }
 
 @dataclass
 class Operations:
