@@ -95,6 +95,10 @@ No seu servidor local, na porta 8501, ou no link, a aplicação deve ficar dispo
 No arquivo [mvp/main.py](mvp/main.py) é possível consultar a versão MVP do app.
 
 ## <a id='next'>[Próximos Passos](#topicos)</a>
+## Comparativo de venda
+* Dada uma venda (preço de compra e de venda) em determinado prazo, qual o equivalente da operação com os indicadores atuais de mercado.
+  * Ex: Terreno de R$ 8 mil vendido por R$ 20 mil em 5 anos, equivale  x% CDI
+
 ### Refatoração de Controllers e Views
 * Estilização da interface gráfica
 * Maior responsabilidade única por classe
