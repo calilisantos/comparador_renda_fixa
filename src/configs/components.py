@@ -15,6 +15,7 @@ class Text:
     inflation_option_label = 'Taxa + Inflação (ex: 1% + IPCA)'
     inflation_yield = 'Taxa + Inflação (ex: 1% + IPCA)'
     invalid_bond_type_message = 'Tipo de rendimento inválido'
+    invalid_yield_message = "Por favor, insira uma taxa de rendimento numérica válida. Ex: 12,5"
     liquid_yield_title = '<p><h3><center>Rendimento Líquido: {liquid_yield}%*</p> <p>*Com o resgate em {maturity_in_days} dias</p></center></h3>'
     main_title = f'<h1><center>Comparador de Renda Fixa</center></h1>'
     maturity_date_label = 'Data de Vencimento'

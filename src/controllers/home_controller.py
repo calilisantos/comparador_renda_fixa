@@ -59,24 +59,27 @@ class HomeController:
         yield_input = HomeView.show_yield_input()
 
         if yield_input:
-            self.base_fields["INFLATION"] = InflationService(index_type=index_type, yields=self.yields).resolve_yield()
-            is_tax_free = product == Text.credit_letters_label
+            try:
+                self.base_fields["INFLATION"] = InflationService(index_type=index_type, yields=self.yields).resolve_yield()
+                is_tax_free = product == Text.credit_letters_label
 
-            gross_yield, net_yield = YieldFacade(base_yields=self.base_fields).calculate(
-                bond_type_label=bond_type,
-                yield_input=yield_input,
-                maturity_days=maturity_in_days,
-                tax_free=is_tax_free
-            )
+                gross_yield, net_yield = YieldFacade(base_yields=self.base_fields).calculate(
+                    bond_type_label=bond_type,
+                    yield_input=yield_input,
+                    maturity_days=maturity_in_days,
+                    tax_free=is_tax_free
+                )
 
-            HomeView.show_result_title()
-            HomeView.show_liquid_title(
-                Text.credit_letters_title.format(liquid_yield=net_yield, maturity_in_days=maturity_in_days, yield_input=gross_yield)
-                if is_tax_free
-                else Text.liquid_yield_title.format(liquid_yield=net_yield, maturity_in_days=maturity_in_days)
-            )
+                HomeView.show_result_title()
+                HomeView.show_liquid_title(
+                    Text.credit_letters_title.format(liquid_yield=net_yield, maturity_in_days=maturity_in_days, yield_input=gross_yield)
+                    if is_tax_free
+                    else Text.liquid_yield_title.format(liquid_yield=net_yield, maturity_in_days=maturity_in_days)
+                )
 
-            self._build_metrics(compared_yield=gross_yield, index_type=index_type)
+                self._build_metrics(compared_yield=gross_yield, index_type=index_type)
+            except ValueError:
+                st.error(Text.invalid_yield_message)
 
     def _get_maturity_in_days(self):
         maturity_type = HomeView.show_maturity_type_radio()

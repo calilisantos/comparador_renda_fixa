@@ -7,6 +7,9 @@ from services.request import RequestService
 class IndexService:
     @staticmethod
     def _get_ratio(response, ratio_code):
+        if not response or len(response) < abs(Request.response_index):
+            raise ValueError("Response data is insufficient")
+
         if ratio_code == Request.selic_code:
             return float(response[Request.response_index].get(Request.ratio_key))
         elif ratio_code == Request.cdi_code:
